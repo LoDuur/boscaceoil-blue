@@ -17,6 +17,8 @@ const OCTAVE_SIZE := 12
 const MAX_NOTES_IN_PATTERN := 128
 const MAX_NOTE_VALUE := 104
 const MAX_NOTE_LENGTH := 128
+## Rows moved by an "octave" step in drumkit patterns.
+const DRUMKIT_OCTAVE_ROWS := 8
 
 ## Key index.
 @export var key: int = 0:
@@ -39,8 +41,6 @@ const MAX_NOTE_LENGTH := 128
 
 # Runtime properties.
 
-## Simple sequential hash used when importing data from files.
-var _hash: int = 0
 ## Flag whether the pattern is being played on this step.
 var is_playing: bool = false
 ## Index of used unique note values, used when drawing a mini note map.
@@ -65,10 +65,6 @@ func clone() -> Pattern:
 	cloned.reindex_active_notes()
 	
 	return cloned
-
-
-func get_hash() -> int:
-	return _hash
 
 
 # Properties.
@@ -126,35 +122,67 @@ func change_scale(new_scale: int) -> Array[Vector3i]:
 	return affected_notes
 
 
-func shift_notes(offset: int) -> void:
-	# Adjust note values to move them higher or lower, within the same key and scale.
-	# Values reaching note range boundaries are kept at those boundary values.
+## Note values addressable in this pattern, in row order: the scale degrees in
+## the pattern's key for melodic instruments, or the item indices for drumkits.
+func get_row_values(instrument: Instrument) -> Array[int]:
+	var row_values: Array[int] = []
 	
-	var valid_notes := _get_valid_note_values()
+	if instrument && instrument.type == Instrument.InstrumentType.INSTRUMENT_DRUMKIT:
+		var drumkit_instrument := instrument as DrumkitInstrument
+		for i in drumkit_instrument.voices.size():
+			row_values.push_back(i)
+		return row_values
 	
-	# Notes are ordered by value, in the ascending order. We reverse the iterator
-	# when going up to avoid collisions.
-	var start_index := 0
-	var max_index := note_amount
-	var index_step := 1
-	if offset > 0:
-		start_index = note_amount - 1
-		max_index = -1
-		index_step = -1
+	for value in _get_valid_note_values():
+		row_values.push_back(value + key)
+	return row_values
+
+
+## Number of rows forming an octave: the scale's degree count, or a fixed
+## number of drum rows for drumkits.
+func get_octave_rows(instrument: Instrument) -> int:
+	if instrument && instrument.type == Instrument.InstrumentType.INSTRUMENT_DRUMKIT:
+		return DRUMKIT_OCTAVE_ROWS
 	
-	for i in range(start_index, max_index, index_step):
-		var note_index := valid_notes.find(notes[i].x - key)
-		var next_index := clampi(note_index + offset, 0, valid_notes.size() - 1)
-		if next_index == note_index:
+	return Scale.get_scale_layout(scale).size()
+
+
+## Every note moved by the given number of rows (scale degrees or drum rows).
+## The shift is atomic: if any note would leave the row range, nothing moves
+## and an empty array is returned. Notes off the current scale are left as is.
+## The result is index-aligned with get_notes_snapshot().
+func get_shifted_notes(row_offset: int, instrument: Instrument) -> Array[Vector3i]:
+	var row_values := get_row_values(instrument)
+	var value_rows := {}
+	for i in row_values.size():
+		value_rows[row_values[i]] = i
+	
+	var shifted: Array[Vector3i] = []
+	for note in get_notes_snapshot():
+		if not value_rows.has(note.x):
+			shifted.push_back(note)
 			continue
 		
-		# Don't move unless the space is unoccupied.
-		if not has_note(valid_notes[next_index] + key, notes[i].y, true):
-			notes[i].x = valid_notes[next_index] + key
+		var row: int = value_rows[note.x] + row_offset
+		if row < 0 || row >= row_values.size():
+			return [] as Array[Vector3i]
+		shifted.push_back(Vector3i(row_values[row], note.y, note.z))
 	
-	sort_notes()
-	reindex_active_notes()
-	notes_changed.emit()
+	return shifted
+
+
+## Every note within the pattern size moved by the given number of ticks,
+## wrapping around, so nothing is lost. Notes beyond the pattern size are left
+## as is. The result is index-aligned with get_notes_snapshot().
+func get_rotated_notes(tick_offset: int, pattern_size: int) -> Array[Vector3i]:
+	var rotated: Array[Vector3i] = []
+	for note in get_notes_snapshot():
+		if note.y < pattern_size:
+			rotated.push_back(Vector3i(note.x, posmod(note.y + tick_offset, pattern_size), note.z))
+		else:
+			rotated.push_back(note)
+	
+	return rotated
 
 
 func change_instrument(new_idx: int, instrument: Instrument) -> Array[Vector3i]:
@@ -233,7 +261,6 @@ func add_note(value: int, position: int, length: int, full_update: bool = true) 
 
 	var note_data := Vector3i(value, position, length)
 	notes[note_amount] = note_data
-	_hash = (_hash + (value * length)) % 2147483647
 
 	if full_update: # Can be disabled and called manually when many notes are added quickly.
 		sort_notes()
@@ -244,6 +271,27 @@ func add_note(value: int, position: int, length: int, full_update: bool = true) 
 	if full_update:
 		note_added.emit(note_data)
 		notes_changed.emit()
+
+
+func get_notes_snapshot() -> Array[Vector3i]:
+	var snapshot: Array[Vector3i] = []
+	for i in note_amount:
+		snapshot.push_back(notes[i])
+	return snapshot
+
+
+## Replaces all notes with the given ones, e.g. to apply or revert an edit.
+func set_notes_snapshot(snapshot: Array[Vector3i]) -> void:
+	for i in MAX_NOTES_IN_PATTERN:
+		notes[i] = Vector3i(-1, 0, 0)
+	note_amount = 0
+	
+	for note_data in snapshot:
+		add_note(note_data.x, note_data.y, note_data.z, false)
+	
+	sort_notes()
+	reindex_active_notes()
+	notes_changed.emit()
 
 
 func restore_notes(stored_notes: Array[Vector3i]) -> void:

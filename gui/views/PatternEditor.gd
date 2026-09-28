@@ -15,6 +15,8 @@ var current_pattern: Pattern = null
 
 @onready var _note_shift_up: Button = %NoteShiftUp
 @onready var _note_shift_down: Button = %NoteShiftDown
+@onready var _note_shift_left: Button = %NoteShiftLeft
+@onready var _note_shift_right: Button = %NoteShiftRight
 
 
 func _ready() -> void:
@@ -25,8 +27,11 @@ func _ready() -> void:
 	_scale_picker.selected.connect(_change_scale)
 	_key_picker.selected.connect(_change_key)
 	
-	_note_shift_up.pressed.connect(_shift_notes.bind(1))
-	_note_shift_down.pressed.connect(_shift_notes.bind(-1))
+	if not Engine.is_editor_hint():
+		_note_shift_up.pressed.connect(Controller.shift_current_pattern_notes.bind(1))
+		_note_shift_down.pressed.connect(Controller.shift_current_pattern_notes.bind(-1))
+		_note_shift_left.pressed.connect(Controller.rotate_current_pattern_notes.bind(-1))
+		_note_shift_right.pressed.connect(Controller.rotate_current_pattern_notes.bind(1))
 	
 	_edit_current_pattern()
 	
@@ -227,31 +232,6 @@ func _change_key() -> void:
 	pattern_state.add_undo_action(func() -> void:
 		var reference_pattern := Controller.current_song.patterns[pattern_state.reference_id]
 		reference_pattern.change_key(old_key_id)
-	)
-	
-	Controller.state_manager.commit_state_change(pattern_state)
-
-
-func _shift_notes(offset: int) -> void:
-	if not Controller.current_song || not current_pattern:
-		return
-	
-	var old_notes := current_pattern.notes.duplicate()
-	
-	# FIXME: This technically can produce empty steps because we don't check if shift will do anything.
-	var pattern_state := Controller.state_manager.create_state_change(StateManager.StateChangeType.PATTERN, Controller.current_pattern_index)
-	pattern_state.add_do_action(func() -> void:
-		var reference_pattern := Controller.current_song.patterns[pattern_state.reference_id]
-		reference_pattern.shift_notes(offset)
-	)
-	pattern_state.add_undo_action(func() -> void:
-		var reference_pattern := Controller.current_song.patterns[pattern_state.reference_id]
-		
-		for i in old_notes.size():
-			reference_pattern.notes[i] = old_notes[i]
-		
-		reference_pattern.reindex_active_notes()
-		reference_pattern.notes_changed.emit()
 	)
 	
 	Controller.state_manager.commit_state_change(pattern_state)

@@ -30,6 +30,9 @@ signal editor_focus_changed()
 signal history_navigated()
 ## Emitted when pending placements (paste/duplicate ghosts, drags) must be dropped.
 signal ghost_cancel_requested()
+## Emitted after a whole-pattern transform; before and after are index-aligned,
+## so editors can carry their selection over.
+signal pattern_notes_transformed(pattern_index: int, before: Array[Vector3i], after: Array[Vector3i])
 
 const MAIN_WINDOW_SCRIPT := preload("res://gui/MainWindow.gd")
 const INFO_POPUP_SCENE := preload("res://gui/widgets/popups/InfoPopup.tscn")
@@ -602,6 +605,63 @@ func preview_pattern_note(value: int, length: int) -> void:
 	var current_pattern := get_current_pattern()
 	if current_pattern:
 		music_player.play_note(current_pattern, note_data)
+
+
+## Replaces the notes of a pattern as one undoable change. With an accumulation
+## id, repeated calls within a short window merge into a single undo step.
+func commit_pattern_notes(pattern_index: int, next_notes: Array[Vector3i], accum_id: String = "") -> void:
+	if not current_song || pattern_index < 0 || pattern_index >= current_song.patterns.size():
+		return
+	
+	var previous_notes := current_song.patterns[pattern_index].get_notes_snapshot()
+	
+	var pattern_state := state_manager.create_state_change(StateManager.StateChangeType.PATTERN, pattern_index, accum_id)
+	var state_context := pattern_state.get_context()
+	# When accumulating, the original "before" is kept and only "after" moves on.
+	if not state_context.has("before"):
+		state_context["before"] = previous_notes
+	state_context["after"] = next_notes
+	
+	pattern_state.add_do_action(func() -> void:
+		var reference_pattern := current_song.patterns[pattern_state.reference_id]
+		reference_pattern.set_notes_snapshot(state_context.after)
+	)
+	pattern_state.add_undo_action(func() -> void:
+		var reference_pattern := current_song.patterns[pattern_state.reference_id]
+		reference_pattern.set_notes_snapshot(state_context.before)
+	)
+	
+	state_manager.commit_state_change(pattern_state)
+
+
+## Moves every note of the current pattern by rows (scale degrees or drum rows).
+func shift_current_pattern_notes(row_offset: int) -> void:
+	var pattern := get_current_pattern()
+	if not pattern || pattern.note_amount == 0 || row_offset == 0:
+		return
+	
+	var instrument := current_song.instruments[pattern.instrument_idx]
+	var before := pattern.get_notes_snapshot()
+	var after := pattern.get_shifted_notes(row_offset, instrument)
+	if after.is_empty():
+		update_status("CAN'T SHIFT — NOTES AT THE EDGE", StatusLevel.WARNING)
+		return
+	
+	commit_pattern_notes(current_pattern_index, after, "notes_shift_all_%d" % [ current_pattern_index ])
+	pattern_notes_transformed.emit(current_pattern_index, before, after)
+
+
+## Moves every note of the current pattern by ticks, wrapping within the pattern.
+func rotate_current_pattern_notes(tick_offset: int) -> void:
+	var pattern := get_current_pattern()
+	if not pattern || pattern.note_amount == 0 || tick_offset == 0:
+		return
+	
+	var before := pattern.get_notes_snapshot()
+	var after := pattern.get_rotated_notes(tick_offset, current_song.pattern_size)
+	
+	commit_pattern_notes(current_pattern_index, after, "notes_shift_all_%d" % [ current_pattern_index ])
+	pattern_notes_transformed.emit(current_pattern_index, before, after)
 
 
 ## Plays several notes of the current pattern at once, e.g. after moving them.
