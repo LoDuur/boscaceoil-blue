@@ -37,6 +37,22 @@ static func save(song: Song, path: String) -> bool:
 	return true
 
 
+# Format v4 layout (comma-separated integers):
+#
+#   version
+#   swing, global_effect, global_effect_power, bpm, pattern_size, bar_size
+#   instrument_count, then per instrument:
+#     type
+#     SINGLE / DRUMKIT: voice_index, color_palette, lp_cutoff, lp_resonance, volume
+#     CUSTOM: see CustomInstrument.write_fields()
+#   pattern_count, then per pattern:
+#     key, scale, instrument_idx, 0 (unused), note_amount,
+#     then per note: value, length, position, 0 (unused)
+#   timeline_length, loop_start, loop_end,
+#   then per bar in the timeline: 8 channel values (pattern index or -1)
+#
+# Compared to v3, instruments start with their type (v3 wrote it second and
+# ignored it), and patterns no longer carry the instrument recording block.
 static func _write(writer: SongFileWriter, song: Song) -> void:
 	# Basic information.
 	
@@ -56,8 +72,8 @@ static func _write(writer: SongFileWriter, song: Song) -> void:
 	writer.write_int(song.instruments.size())
 	
 	for instrument in song.instruments:
+		writer.write_int(instrument.type)
 		writer.write_int(instrument.voice_index)
-		writer.write_int(instrument.type) # For compatibility, but not actually needed.
 		writer.write_int(instrument.color_palette)
 		writer.write_int(instrument.lp_cutoff)
 		writer.write_int(instrument.lp_resonance)
@@ -79,8 +95,6 @@ static func _write(writer: SongFileWriter, song: Song) -> void:
 			writer.write_int(pattern.notes[i].z) # Note length
 			writer.write_int(pattern.notes[i].y) # Note position
 			writer.write_int(0) # Empty write, this value is not used.
-		
-		writer.write_int(0) # Legacy filter automation flag, always off.
 	
 	# Arrangement.
 	

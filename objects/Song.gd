@@ -14,7 +14,7 @@ signal pattern_removed(pattern: Pattern)
 signal instrument_added(instrument: Instrument)
 signal instrument_removed(instrument: Instrument)
 
-const FILE_FORMAT := 3
+const FILE_FORMAT := 4
 const FILE_EXTENSION := "ceol"
 const FILE_DEFAULT_NAME := "new_song"
 

@@ -148,6 +148,10 @@ func _save_ceol_song_confirmed(path: String) -> void:
 	if not Controller.current_song:
 		return
 	
+	# Saving always writes the current format; an older file overwritten in
+	# place stops opening in the original app, so that is disclosed once.
+	var overwrites_legacy_file := Controller.current_song.format_version < Song.FILE_FORMAT && path == Controller.current_song.filename
+	
 	var success := SongSaver.save(Controller.current_song, path)
 	if not success:
 		Controller.update_status("FAILED TO SAVE SONG", Controller.StatusLevel.ERROR)
@@ -156,6 +160,20 @@ func _save_ceol_song_confirmed(path: String) -> void:
 	Controller.mark_song_saved()
 	Controller.update_status("SONG SAVED", Controller.StatusLevel.SUCCESS)
 	print("Successfully saved song to %s." % [ path ])
+	
+	if overwrites_legacy_file:
+		_show_format_upgrade_notice()
+
+
+func _show_format_upgrade_notice() -> void:
+	var notice := Controller.get_info_popup()
+	if not notice:
+		return # Popup is busy.
+	
+	notice.title = "Song file upgraded"
+	notice.content = "This song was saved in the [accent]NEW FILE FORMAT[/accent] (v%d).\n\nIt will no longer open in the original Bosca Ceoil or in upstream Bosca Ceoil Blue." % [ Song.FILE_FORMAT ]
+	notice.add_button("OK", notice.close_popup)
+	Controller.show_window_popup(notice, Vector2(640, 210))
 
 
 func check_song_on_exit(always_confirm: bool = false) -> void:
