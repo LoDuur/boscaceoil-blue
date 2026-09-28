@@ -7,6 +7,8 @@
 @tool
 extends ItemDock
 
+const SQUISHY_BUTTON_SCENE := preload("res://gui/widgets/SquishyButton.tscn")
+
 ## Current edited song.
 var current_song: Song = null
 
@@ -32,6 +34,8 @@ func _ready() -> void:
 	_update_theme()
 	theme_changed.connect(_update_theme)
 	
+	_add_custom_button()
+	
 	if not Engine.is_editor_hint():
 		item_created.connect(Controller.create_and_edit_instrument)
 		item_selected.connect(Controller.edit_instrument)
@@ -40,6 +44,31 @@ func _ready() -> void:
 		Controller.song_loaded.connect(_edit_current_song)
 		Controller.song_instrument_created.connect(queue_redraw)
 		Controller.song_instrument_changed.connect(queue_redraw)
+
+
+## Places a NEW CUSTOM button next to the dock's add button.
+func _add_custom_button() -> void:
+	# A fresh instance, so it doesn't inherit the add button's connections.
+	var custom_button: SquishyButton = SQUISHY_BUTTON_SCENE.instantiate()
+	custom_button.name = "AddCustomItem"
+	custom_button.text = "NEW CUSTOM"
+	add_child(custom_button)
+	
+	custom_button.layout_mode = _add_button.layout_mode
+	for side: Side in [ SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM ]:
+		custom_button.set_anchor(side, _add_button.get_anchor(side))
+		custom_button.set_offset(side, _add_button.get_offset(side))
+	custom_button.grow_horizontal = _add_button.grow_horizontal
+	custom_button.grow_vertical = _add_button.grow_vertical
+	
+	# Split the bottom row: the add button to the left, the new one to the right.
+	_add_button.offset_left = -176.0
+	_add_button.offset_right = -8.0
+	custom_button.offset_left = 8.0
+	custom_button.offset_right = 176.0
+	
+	if not Engine.is_editor_hint():
+		custom_button.pressed.connect(Controller.create_custom_instrument)
 
 
 func _update_theme() -> void:

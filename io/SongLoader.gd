@@ -302,6 +302,12 @@ static func _load_v4(reader: SongFileReader) -> Song:
 					return _fail(reader, "voice %d doesn't match instrument type %d" % [ voice_index, instrument_type ])
 				reader.read_int() # The color palette comes from the voice data.
 			
+			Instrument.InstrumentType.INSTRUMENT_CUSTOM:
+				var custom_instrument := CustomInstrument.new()
+				if not custom_instrument.read_fields(reader.read_int):
+					return _fail(reader, "invalid custom instrument %d" % [ i ])
+				instrument = custom_instrument
+			
 			_:
 				return _fail(reader, "unknown instrument type %d" % [ instrument_type ])
 		

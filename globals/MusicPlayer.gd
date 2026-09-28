@@ -215,6 +215,15 @@ func play_notes(pattern: Pattern, notes: Array[Vector3i]) -> void:
 		_play_note(active_instrument, note_data, note_data.y)
 
 
+## Plays a note on the given instrument, regardless of the edited pattern.
+func play_instrument_note(instrument: Instrument, note_value: int, length: int) -> void:
+	if not Controller.current_song:
+		return
+	
+	_cutoff_note()
+	_play_note(instrument, Vector3i(note_value, 0, length), 0)
+
+
 func _cutoff_note() -> void:
 	_driver.note_off(-1, 0, 0, 0, true)
 	

@@ -43,8 +43,10 @@ static func save(song: Song, path: String) -> bool:
 #   swing, global_effect, global_effect_power, bpm, pattern_size, bar_size
 #   instrument_count, then per instrument:
 #     type
-#     SINGLE / DRUMKIT: voice_index, color_palette, lp_cutoff, lp_resonance, volume
-#     CUSTOM: see CustomInstrument.write_fields()
+#     SINGLE / DRUMKIT: voice_index, color_palette
+#     CUSTOM: the CustomInstrument.FIELDS values in declaration order, color_palette,
+#             name byte count, then the name's UTF-8 bytes
+#     lp_cutoff, lp_resonance, volume
 #   pattern_count, then per pattern:
 #     key, scale, instrument_idx, 0 (unused), note_amount,
 #     then per note: value, length, position, 0 (unused)
@@ -73,8 +75,11 @@ static func _write(writer: SongFileWriter, song: Song) -> void:
 	
 	for instrument in song.instruments:
 		writer.write_int(instrument.type)
-		writer.write_int(instrument.voice_index)
-		writer.write_int(instrument.color_palette)
+		if instrument is CustomInstrument:
+			(instrument as CustomInstrument).write_fields(writer.write_int)
+		else:
+			writer.write_int(instrument.voice_index)
+			writer.write_int(instrument.color_palette)
 		writer.write_int(instrument.lp_cutoff)
 		writer.write_int(instrument.lp_resonance)
 		writer.write_int(instrument.volume)

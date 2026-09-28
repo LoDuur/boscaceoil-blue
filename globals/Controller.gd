@@ -30,6 +30,8 @@ signal editor_focus_changed()
 signal history_navigated()
 ## Emitted when pending placements (paste/duplicate ghosts, drags) must be dropped.
 signal ghost_cancel_requested()
+## Emitted when a custom instrument's sound parameters change.
+signal custom_instrument_sound_changed(instrument_index: int)
 ## Emitted after a whole-pattern transform; before and after are index-aligned,
 ## so editors can carry their selection over.
 signal pattern_notes_transformed(pattern_index: int, before: Array[Vector3i], after: Array[Vector3i])
@@ -96,6 +98,14 @@ var _info_popup: InfoPopup = null
 var _controls_blocker: PopupManager.PopupControl = null
 
 var _controls_locked: bool = false
+
+## Minimum time between custom instrument auditions, in milliseconds.
+const AUDITION_INTERVAL_MSEC := 150
+## Middle C.
+const AUDITION_NOTE := 60
+const AUDITION_LENGTH := 4
+var _last_audition_msec: int = -AUDITION_INTERVAL_MSEC
+var _audition_pending: bool = false
 
 
 func _init() -> void:
@@ -769,7 +779,13 @@ func randomize_instrument(instrument_index: int) -> void:
 	if instrument_index != instrument_index_:
 		return
 
-	var current_voice := voice_manager.get_voice_data_at(current_song.instruments[instrument_index].voice_index)
+	var instrument := current_song.instruments[instrument_index]
+	if instrument is CustomInstrument:
+		# A custom instrument stays custom; only its sound is rolled.
+		_randomize_custom_instrument(instrument_index)
+		return
+	
+	var current_voice := voice_manager.get_voice_data_at(instrument.voice_index)
 	var voice_data := voice_manager.get_random_voice_data(current_voice)
 	_set_current_instrument_by_voice(voice_data)
 
@@ -917,6 +933,12 @@ func _set_current_instrument_by_voice(voice_data: VoiceManager.VoiceData) -> voi
 	if not voice_data:
 		return
 	
+	_replace_current_instrument(instance_instrument_by_voice.bind(voice_data))
+
+
+## Replaces the current instrument with one made by the factory, updating the
+## patterns that use it, as one undoable change.
+func _replace_current_instrument(make_instrument: Callable) -> void:
 	var instrument_idx := current_instrument_index
 	var old_instrument := current_song.instruments[instrument_idx]
 	
@@ -927,7 +949,7 @@ func _set_current_instrument_by_voice(voice_data: VoiceManager.VoiceData) -> voi
 	state_context["reset_patterns_affected"] = []
 
 	song_state.add_do_action(func() -> void:
-		var instrument := instance_instrument_by_voice(voice_data)
+		var instrument: Instrument = make_instrument.call()
 		current_song.instruments[instrument_idx] = instrument
 		
 		state_context.reset_patterns.clear()
@@ -970,6 +992,167 @@ func _set_current_instrument_by_voice(voice_data: VoiceManager.VoiceData) -> voi
 	)
 	
 	state_manager.commit_state_change(song_state)
+
+
+# Custom instruments.
+
+func create_custom_instrument() -> void:
+	if not current_song:
+		return
+	if current_song.instruments.size() >= Song.MAX_INSTRUMENT_COUNT:
+		update_status("INSTRUMENT LIMIT REACHED (%d)" % [ Song.MAX_INSTRUMENT_COUNT ], StatusLevel.WARNING)
+		return
+	
+	var song_state := state_manager.create_state_change(StateManager.StateChangeType.SONG)
+	var state_context := song_state.get_context()
+	state_context["id"] = -1
+	
+	song_state.add_do_action(func() -> void:
+		state_context.id = current_song.instruments.size()
+		current_song.add_instrument(CustomInstrument.new())
+		song_instrument_created.emit()
+	)
+	song_state.add_undo_action(func() -> void:
+		delete_instrument_nocheck(state_context.id)
+	)
+	
+	state_manager.commit_state_change(song_state)
+	_change_current_instrument(current_song.instruments.size() - 1)
+
+
+## Turns the current instrument into a custom one, copying the source
+## definition, or using defaults when there is none.
+func set_current_instrument_custom(source: CustomInstrument = null) -> void:
+	if not get_current_instrument():
+		return
+	
+	var definition := source.duplicate_instrument() if source else CustomInstrument.new()
+	_replace_current_instrument(func() -> Instrument: return definition.duplicate_instrument())
+
+
+func _get_custom_instrument(instrument_index: int) -> CustomInstrument:
+	if not current_song || instrument_index < 0 || instrument_index >= current_song.instruments.size():
+		return null
+	return current_song.instruments[instrument_index] as CustomInstrument
+
+
+## Changes one sound parameter. Rapid edits of the same field merge into one
+## undo step.
+func set_custom_instrument_field(instrument_index: int, field: String, value: int) -> void:
+	_commit_custom_instrument_change(instrument_index, "custom_instrument_%d_%s" % [ instrument_index, field ], { field: value })
+
+
+func set_custom_instrument_fields(instrument_index: int, values: Dictionary) -> void:
+	_commit_custom_instrument_change(instrument_index, "", values)
+
+
+func _commit_custom_instrument_change(instrument_index: int, accum_id: String, values: Dictionary) -> void:
+	var instrument := _get_custom_instrument(instrument_index)
+	if not instrument:
+		return
+	
+	var next_values := {}
+	for field: String in values:
+		next_values[field] = CustomInstrument.clamp_field(field, values[field])
+	
+	var instrument_state := state_manager.create_state_change(StateManager.StateChangeType.INSTRUMENT, instrument_index, accum_id)
+	var state_context := instrument_state.get_context()
+	if not state_context.has("before"):
+		var previous_values := {}
+		for field: String in next_values:
+			previous_values[field] = instrument.get_field(field)
+		state_context["before"] = previous_values
+	state_context["after"] = next_values
+	
+	instrument_state.add_do_action(func() -> void:
+		_apply_custom_instrument_values(instrument_state.reference_id, state_context.after)
+	)
+	instrument_state.add_undo_action(func() -> void:
+		_apply_custom_instrument_values(instrument_state.reference_id, state_context.before)
+	)
+	
+	state_manager.commit_state_change(instrument_state)
+	audition_instrument(instrument_index)
+
+
+func _apply_custom_instrument_values(instrument_index: int, values: Dictionary) -> void:
+	var instrument := _get_custom_instrument(instrument_index)
+	if not instrument:
+		return
+	
+	for field: String in values:
+		instrument.set_field(field, values[field])
+	custom_instrument_sound_changed.emit(instrument_index)
+
+
+func set_custom_instrument_name(instrument_index: int, value: String) -> void:
+	_commit_custom_instrument_identity(instrument_index, "display_name", CustomInstrument.sanitize_name(value))
+
+
+func set_custom_instrument_palette(instrument_index: int, value: int) -> void:
+	_commit_custom_instrument_identity(instrument_index, "palette", ColorPalette.validate(value))
+
+
+func _commit_custom_instrument_identity(instrument_index: int, property: String, value: Variant) -> void:
+	var instrument := _get_custom_instrument(instrument_index)
+	if not instrument || instrument.get(property) == value:
+		return
+	
+	var instrument_state := state_manager.create_state_change(StateManager.StateChangeType.INSTRUMENT, instrument_index)
+	var previous_value: Variant = instrument.get(property)
+	instrument_state.add_do_action(func() -> void:
+		current_song.instruments[instrument_state.reference_id].set(property, value)
+		song_instrument_changed.emit()
+	)
+	instrument_state.add_undo_action(func() -> void:
+		current_song.instruments[instrument_state.reference_id].set(property, previous_value)
+		song_instrument_changed.emit()
+	)
+	
+	state_manager.commit_state_change(instrument_state)
+
+
+## Rolls new sound parameters within musically safe ranges, so the result is
+## always audible and not too harsh.
+func _randomize_custom_instrument(instrument_index: int) -> void:
+	var values := {}
+	values["osc_mode"] = randi_range(CustomInstrument.OscillatorMode.SINGLE, CustomInstrument.OscillatorMode.DUAL)
+	values["wave1"] = CustomInstrument.WAVEFORMS.pick_random()[1]
+	values["wave2"] = CustomInstrument.WAVEFORMS.pick_random()[1]
+	values["dual_connection"] = randi_range(0, CustomInstrument.CONNECTION_MAX)
+	values["dual_balance"] = randi_range(-32, 32)
+	values["dual_detune"] = randi_range(-16, 16)
+	values["attack_rate"] = randi_range(40, CustomInstrument.RATE_MAX)
+	values["decay_rate"] = randi_range(0, 40)
+	values["sustain_rate"] = randi_range(0, 20)
+	values["release_rate"] = randi_range(16, 48)
+	values["sustain_level"] = randi_range(0, 10)
+	values["total_level"] = randi_range(0, 24)
+	values["vibrato_depth"] = [ 0, 0, 0, randi_range(4, 24) ].pick_random()
+	set_custom_instrument_fields(instrument_index, values)
+
+
+## Plays a short note on the instrument while playback is stopped, at most
+## once per AUDITION_INTERVAL_MSEC; the last change inside the window plays
+## when it ends.
+func audition_instrument(instrument_index: int) -> void:
+	if music_player.is_playing() || _audition_pending:
+		return
+	
+	var wait_msec := _last_audition_msec + AUDITION_INTERVAL_MSEC - Time.get_ticks_msec()
+	if wait_msec > 0:
+		_audition_pending = true
+		get_tree().create_timer(wait_msec / 1000.0).timeout.connect(func() -> void:
+			_audition_pending = false
+			audition_instrument(instrument_index)
+		)
+		return
+	
+	if not current_song || instrument_index < 0 || instrument_index >= current_song.instruments.size():
+		return
+	
+	_last_audition_msec = Time.get_ticks_msec()
+	music_player.play_instrument_note(current_song.instruments[instrument_index], AUDITION_NOTE, AUDITION_LENGTH)
 
 
 func set_current_instrument(category: String, instrument_name: String) -> void:

@@ -12,6 +12,7 @@ const INSTRUMENT_NUMBER := 16
 enum InstrumentType {
 	INSTRUMENT_SINGLE,
 	INSTRUMENT_DRUMKIT,
+	INSTRUMENT_CUSTOM,
 	MAX
 }
 
@@ -35,15 +36,15 @@ var _voice_data: VoiceManager.VoiceData = null
 
 ## Category of the instrument, used for grouping in UI.
 var category: String:
-	get: return _voice_data.category if _voice_data else "[UNKNOWN]"
+	get: return _get_category()
 	set(value): pass
 ## Name of the instrument, used in UI.
 var name: String:
-	get: return _voice_data.name if _voice_data else "[Unknown]"
+	get: return _get_name()
 	set(value): pass
 ## Color palette for the instrument, used to color code the UI.
 var color_palette: int:
-	get: return _voice_data.color_palette if _voice_data else ColorPalette.PALETTE_GRAY
+	get: return _get_color_palette()
 	set(value): pass
 
 # Adjustments.
@@ -60,10 +61,26 @@ var color_palette: int:
 
 
 func _init(voice_data: VoiceManager.VoiceData) -> void:
-	set_voice_data(voice_data)
+	if voice_data:
+		set_voice_data(voice_data)
 
 
 # Voice data.
+
+## Virtual. Display identity comes from the preset voice data by default.
+func _get_category() -> String:
+	return _voice_data.category if _voice_data else "[UNKNOWN]"
+
+
+## Virtual.
+func _get_name() -> String:
+	return _voice_data.name if _voice_data else "[Unknown]"
+
+
+## Virtual.
+func _get_color_palette() -> int:
+	return _voice_data.color_palette if _voice_data else ColorPalette.PALETTE_GRAY
+
 
 func set_voice_data(voice_data: VoiceManager.VoiceData) -> void:
 	_voice_data = voice_data

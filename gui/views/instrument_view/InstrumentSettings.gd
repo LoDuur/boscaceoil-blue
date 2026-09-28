@@ -8,6 +8,12 @@ extends PanelContainer
 
 var current_instrument: Instrument = null
 
+## Item id offsets in the instrument picker for the CUSTOM category.
+const SONG_CUSTOM_ID_BASE := 2000000
+const LIBRARY_CUSTOM_ID_BASE := 3000000
+
+var _library_entries: Array[CustomInstrumentLibrary.Entry] = []
+
 @onready var _instrument_label: Label = %InstrumentLabel
 
 @onready var _category_picker: OptionPicker = %CategoryPicker
@@ -18,6 +24,7 @@ var current_instrument: Instrument = null
 
 @onready var _lowpass_slider: PadSlider = %LowPassSlider
 @onready var _volume_slider: PadSlider = %VolumeSlider
+@onready var _sound_panel: Control = %SoundPanel
 
 
 func _ready() -> void:
@@ -38,6 +45,7 @@ func _ready() -> void:
 		Controller.song_instrument_changed.connect(_edit_current_instrument)
 		# Keeps the pads in sync with undo/redo.
 		Controller.state_manager.state_changed.connect(_update_sliders)
+		Controller.state_manager.state_changed.connect(_update_sound_panel)
 
 
 # Data.
@@ -71,6 +79,14 @@ func _edit_current_instrument() -> void:
 		_update_selected_instrument()
 	
 	_update_sliders()
+	_update_sound_panel()
+
+
+func _update_sound_panel() -> void:
+	var custom_instrument := current_instrument as CustomInstrument
+	_sound_panel.visible = custom_instrument != null
+	if custom_instrument:
+		_sound_panel.edit_instrument(Controller.current_instrument_index, custom_instrument)
 
 
 # Instrument editing.
@@ -85,6 +101,11 @@ func _set_category_options() -> void:
 		
 		_category_picker.options.push_back(item)
 		category_id += 1
+	
+	var custom_item := OptionListPopup.Item.new()
+	custom_item.id = category_id
+	custom_item.text = CustomInstrument.CATEGORY
+	_category_picker.options.push_back(custom_item)
 	_category_picker.commit_options()
 
 
@@ -96,8 +117,13 @@ func _set_instrument_options() -> void:
 		_instrument_picker.commit_options()
 		return
 	
+	if current_instrument is CustomInstrument:
+		_set_custom_instrument_options()
+		return
+	
 	# Update the instrument picker.
 	
+	_instrument_picker.placeholder_text = "Instrument Name"
 	var sub_categories := Controller.voice_manager.get_sub_categories(current_instrument.category)
 	var sub_category_id := 1000000
 	var selected_item: OptionListPopup.Item = null
@@ -136,6 +162,43 @@ func _set_instrument_options() -> void:
 	_instrument_picker.set_selected(selected_item)
 
 
+## The CUSTOM list offers definitions to copy into the current instrument: the
+## song's other custom instruments, then the user library.
+func _set_custom_instrument_options() -> void:
+	_instrument_picker.placeholder_text = "Load a custom definition"
+	
+	var song_items: Array[OptionListPopup.Item] = []
+	for i in Controller.current_song.instruments.size():
+		var instrument := Controller.current_song.instruments[i]
+		if instrument is CustomInstrument && i != Controller.current_instrument_index:
+			var item := OptionListPopup.Item.new()
+			item.id = SONG_CUSTOM_ID_BASE + i
+			item.text = "%d %s" % [ i + 1, instrument.name ]
+			song_items.push_back(item)
+	
+	var library_result := CustomInstrumentLibrary.load_entries()
+	_library_entries = library_result.entries
+	if library_result.skipped_count > 0:
+		Controller.update_status("%d LIBRARY INSTRUMENTS SKIPPED (INVALID FILES)" % [ library_result.skipped_count ], Controller.StatusLevel.WARNING)
+	
+	var library_items: Array[OptionListPopup.Item] = []
+	for i in _library_entries.size():
+		var item := OptionListPopup.Item.new()
+		item.id = LIBRARY_CUSTOM_ID_BASE + i
+		item.text = _library_entries[i].instrument.display_name
+		library_items.push_back(item)
+	
+	for group: Array in [ [ "In this song", song_items, SONG_CUSTOM_ID_BASE - 1 ], [ "Library", library_items, LIBRARY_CUSTOM_ID_BASE - 1 ] ]:
+		var sublist := OptionListPopup.Item.new()
+		sublist.id = group[2]
+		sublist.text = group[0]
+		sublist.is_sublist = true
+		sublist.sublist_options.assign(group[1])
+		_instrument_picker.options.push_back(sublist)
+	
+	_instrument_picker.commit_options()
+
+
 func _update_selected_category() -> void:
 	_category_picker.clear_selected()
 	
@@ -152,6 +215,9 @@ func _update_selected_instrument() -> void:
 	_instrument_picker.clear_selected()
 	
 	if not current_instrument:
+		return
+	if current_instrument is CustomInstrument:
+		_set_instrument_options() # The list depends on the edited slot.
 		return
 	
 	for linked_instrument_item in _instrument_picker.get_linked_options():
@@ -172,6 +238,11 @@ func _category_selected() -> void:
 		return
 	
 	var category_name := _category_picker.get_selected().text
+	if category_name == CustomInstrument.CATEGORY:
+		if not (current_instrument is CustomInstrument):
+			Controller.set_current_instrument_custom()
+		return
+	
 	Controller.set_current_instrument_by_category(category_name)
 
 
@@ -180,8 +251,25 @@ func _instrument_selected() -> void:
 		return
 	
 	var category_name := _category_picker.get_selected().text
-	var instrument_name := _instrument_picker.get_selected().text
-	Controller.set_current_instrument(category_name, instrument_name)
+	var selected_item := _instrument_picker.get_selected()
+	if category_name == CustomInstrument.CATEGORY:
+		_custom_definition_selected(selected_item.id)
+		return
+	
+	Controller.set_current_instrument(category_name, selected_item.text)
+
+
+func _custom_definition_selected(item_id: int) -> void:
+	var source: CustomInstrument = null
+	if item_id >= LIBRARY_CUSTOM_ID_BASE:
+		var entry_index := item_id - LIBRARY_CUSTOM_ID_BASE
+		if entry_index < _library_entries.size():
+			source = _library_entries[entry_index].instrument
+	elif item_id >= SONG_CUSTOM_ID_BASE:
+		source = Controller.current_song.instruments[item_id - SONG_CUSTOM_ID_BASE] as CustomInstrument
+	
+	if source:
+		Controller.set_current_instrument_custom(source)
 
 
 func _instrument_filter_changed() -> void:
