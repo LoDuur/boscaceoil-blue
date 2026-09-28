@@ -221,18 +221,47 @@ func clear_pattern(bar_idx: int, channel_idx: int) -> void:
 	
 	# If we modified the last bar, check the timeline length for changes.
 	if bar_idx == (timeline_length - 1):
-		while timeline_length > 0:
-			var matched := false
-			for i in CHANNEL_NUMBER:
-				if timeline_bars[timeline_length - 1][i] > -1:
-					matched = true
-					break
-			if matched:
-				break
-			
-			timeline_length -= 1
+		_trim_timeline_length()
 	
 	patterns_changed.emit()
+
+
+func _trim_timeline_length() -> void:
+	while timeline_length > 0:
+		var matched := false
+		for i in CHANNEL_NUMBER:
+			if timeline_bars[timeline_length - 1][i] > -1:
+				matched = true
+				break
+		if matched:
+			break
+		
+		timeline_length -= 1
+
+
+## Applies many placement changes at once, as Vector2i(bar, channel) -> pattern
+## index (-1 clears the cell), and notifies once. Clears go first, so the
+## timeline length is recomputed correctly regardless of order.
+func apply_cell_changes(changes: Dictionary) -> void:
+	var cleared_last_bar := false
+	for cell: Vector2i in changes:
+		if changes[cell] < 0 && _is_cell_valid(cell):
+			timeline_bars[cell.x][cell.y] = -1
+			cleared_last_bar = cleared_last_bar || cell.x == (timeline_length - 1)
+	if cleared_last_bar:
+		_trim_timeline_length()
+	
+	for cell: Vector2i in changes:
+		if changes[cell] >= 0 && _is_cell_valid(cell):
+			timeline_bars[cell.x][cell.y] = changes[cell]
+			if cell.x >= timeline_length:
+				timeline_length = cell.x + 1
+	
+	patterns_changed.emit()
+
+
+func _is_cell_valid(cell: Vector2i) -> bool:
+	return cell.x >= 0 && cell.x < BAR_NUMBER && cell.y >= 0 && cell.y < CHANNEL_NUMBER
 
 
 # Loop.
