@@ -50,7 +50,9 @@ func _process(delta: float) -> void:
 
 
 func _shortcut_input(event: InputEvent) -> void:
-	_button_holder.input(event, not is_visible_in_tree())
+	# Arrow scrolling yields to a grid editor that moves its selection with arrows.
+	var arrows_captured := not Engine.is_editor_hint() && Controller.are_arrows_captured()
+	_button_holder.input(event, not is_visible_in_tree() || arrows_captured)
 
 
 # Buttons.

@@ -25,6 +25,12 @@ signal status_updated(level: StatusLevel, message: String)
 signal navigation_requested(target: int)
 signal navigation_succeeded(target: int)
 
+signal editor_focus_changed()
+## Emitted after an undo or a redo; editors clear their selection.
+signal history_navigated()
+## Emitted when pending placements (paste/duplicate ghosts, drags) must be dropped.
+signal ghost_cancel_requested()
+
 const MAIN_WINDOW_SCRIPT := preload("res://gui/MainWindow.gd")
 const INFO_POPUP_SCENE := preload("res://gui/widgets/popups/InfoPopup.tscn")
 
@@ -33,6 +39,13 @@ enum StatusLevel {
 	SUCCESS,
 	WARNING,
 	ERROR,
+}
+
+## Grid editor that receives keyboard editing actions.
+enum EditorFocus {
+	NONE,
+	NOTES,
+	ARRANGEMENT,
 }
 
 enum DragSources {
@@ -53,6 +66,14 @@ var current_song: Song = null
 var current_pattern_index: int = -1
 ## Current edited instrument in the song, by index.
 var current_instrument_index: int = -1
+
+## Grid editor that receives keyboard editing actions, set on mouse press.
+var editor_focus: EditorFocus = EditorFocus.NONE
+## In-app clipboards; they survive pattern switches.
+var note_clipboard: GridClipboard = GridClipboard.new()
+var arrangement_clipboard: GridClipboard = GridClipboard.new()
+## Editors currently using the bare arrow keys (they have a selection or a ghost).
+var _arrow_capturing_editors: Dictionary = {}
 
 var instrument_themes: Dictionary = {
 	ColorPalette.PALETTE_BLUE:   preload("res://gui/theme/instruments/instrument_theme_blue.tres"),
@@ -168,15 +189,19 @@ func _shortcut_input(event: InputEvent) -> void:
 		
 		get_viewport().set_input_as_handled()
 	
-	elif event.is_action_pressed("ui_undo", false, true):
+	elif event.is_action_pressed("bosca_undo", false, true):
 		if current_song:
+			ghost_cancel_requested.emit()
 			state_manager.undo_state_change()
+			history_navigated.emit()
 		
 		get_viewport().set_input_as_handled()
 	
-	elif event.is_action_pressed("ui_redo", false, true):
+	elif event.is_action_pressed("bosca_redo", false, true):
 		if current_song:
+			ghost_cancel_requested.emit()
 			state_manager.do_state_change()
+			history_navigated.emit()
 		
 		get_viewport().set_input_as_handled()
 
@@ -184,6 +209,7 @@ func _shortcut_input(event: InputEvent) -> void:
 # Navigation.
 
 func navigate_to(target: Menu.NavigationTarget) -> void:
+	ghost_cancel_requested.emit()
 	navigation_requested.emit(target)
 
 
@@ -299,10 +325,33 @@ func update_status_notes_dropped(dropped_amount: int) -> void:
 		update_status("%d NOTES WERE REMOVED (CTRL + Z TO UNDO)" % [ dropped_amount ], Controller.StatusLevel.WARNING)
 
 
+# Grid editor focus.
+
+func set_editor_focus(focus: EditorFocus) -> void:
+	if editor_focus == focus:
+		return
+	
+	editor_focus = focus
+	editor_focus_changed.emit()
+
+
+func set_editor_arrow_capture(editor: EditorFocus, captured: bool) -> void:
+	_arrow_capturing_editors[editor] = captured
+
+
+## Whether the focused editor uses the bare arrow keys, in which case arrow
+## scrolling elsewhere is suspended.
+func are_arrows_captured() -> bool:
+	return _arrow_capturing_editors.get(editor_focus, false)
+
+
 # Song editing.
 
 func set_current_song(song: Song) -> void:
 	state_manager.clear_state_memory()
+	
+	ghost_cancel_requested.emit()
+	set_editor_focus(EditorFocus.NONE)
 	
 	current_song = song
 	_change_current_pattern(0, false, true)
@@ -320,6 +369,7 @@ func mark_song_saved() -> void:
 
 
 func lock_song_editing(message: String) -> void:
+	ghost_cancel_requested.emit()
 	_controls_locked = true
 	show_blocker()
 	controls_locked.emit(message)
@@ -552,6 +602,19 @@ func preview_pattern_note(value: int, length: int) -> void:
 	var current_pattern := get_current_pattern()
 	if current_pattern:
 		music_player.play_note(current_pattern, note_data)
+
+
+## Plays several notes of the current pattern at once, e.g. after moving them.
+func preview_pattern_notes(note_values: Array[int], length: int) -> void:
+	var current_pattern := get_current_pattern()
+	if not current_pattern || note_values.is_empty():
+		return
+	
+	var position := maxi(0, music_player.get_pattern_time())
+	var notes: Array[Vector3i] = []
+	for value in note_values:
+		notes.push_back(Vector3i(value, position, length))
+	music_player.play_notes(current_pattern, notes)
 
 
 func _handle_pattern_note_added(note_data: Vector3i) -> void:

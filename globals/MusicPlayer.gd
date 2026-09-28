@@ -203,6 +203,18 @@ func play_note(pattern: Pattern, note_data: Vector3i) -> void:
 	_play_note(active_instrument, note_data, note_data.y)
 
 
+func play_notes(pattern: Pattern, notes: Array[Vector3i]) -> void:
+	var song := Controller.current_song
+	if not song || song.instruments.is_empty() || song.patterns.is_empty():
+		return
+	
+	_cutoff_note()
+	
+	var active_instrument := song.instruments[pattern.instrument_idx]
+	for note_data in notes:
+		_play_note(active_instrument, note_data, note_data.y)
+
+
 func _cutoff_note() -> void:
 	_driver.note_off(-1, 0, 0, 0, true)
 	

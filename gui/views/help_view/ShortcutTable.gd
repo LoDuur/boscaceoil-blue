@@ -20,8 +20,8 @@ static func get_sections() -> Array[Section]:
 	section.action("bosca_save", "Save current song")
 	section.action("bosca_save_as", "Save as a copy")
 	section.action("bosca_export", "Export song as WAV")
-	section.action("ui_undo", "Undo last action")
-	section.action("ui_redo", "Redo last action")
+	section.action("bosca_undo", "Undo last action")
+	section.action("bosca_redo", "Redo last action")
 	section.action("bosca_toggle_fullscreen", "Toggle fullscreen")
 	sections.push_back(section)
 	
@@ -53,7 +53,7 @@ static func get_sections() -> Array[Section]:
 	section.text("DRAG PATTERN", "Copy the pattern")
 	section.text("ALT + DRAG PATTERN", "Create a pattern variant")
 	section.text("RIGHT CLICK", "Remove the pattern")
-	section.action("bosca_patternmap_duplicate", "Create a pattern variant")
+	section.action("bosca_patternmap_make_variant", "Create a pattern variant")
 	sections.push_back(section)
 	
 	section = Section.new("TIMELINE", 1)

@@ -164,7 +164,7 @@ func _shortcut_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("bosca_patternmap_scale_smaller", true, true):
 		_resize_pattern_width(-1)
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("bosca_patternmap_duplicate", false, true):
+	elif event.is_action_pressed("bosca_patternmap_make_variant", false, true):
 		_clone_pattern_at_cursor()
 		get_viewport().set_input_as_handled()
 

@@ -156,10 +156,10 @@ func _shortcut_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("bosca_notemap_cursor_smaller", true, true):
 		_adjust_note_cursor(-1)
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_copy", false, true):
+	elif event.is_action_pressed("bosca_copy", false, true):
 		_copy_selected_notes()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_paste", false, true):
+	elif event.is_action_pressed("bosca_paste", false, true):
 		_paste_selected_notes()
 		get_viewport().set_input_as_handled()
 
