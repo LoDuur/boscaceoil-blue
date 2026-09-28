@@ -25,7 +25,6 @@ var _subtitle_easter_egg: bool = false
 @onready var _create_song_button: SquishyButton = %CreateSong
 @onready var _load_song_button: SquishyButton = %LoadSong
 @onready var _save_song_button: SquishyButton = %SaveSong
-@onready var _import_song_button: SquishyButton = %ImportSong
 @onready var _export_song_button: SquishyButton = %ExportSong
 
 @onready var _pattern_size_stepper: Stepper = %PatternStepper
@@ -54,7 +53,6 @@ func _ready() -> void:
 	_create_song_button.pressed.connect(Controller.io_manager.create_new_song_safe)
 	_load_song_button.pressed.connect(Controller.io_manager.load_ceol_song_safe)
 	_save_song_button.pressed.connect(Controller.io_manager.save_ceol_song)
-	_import_song_button.pressed.connect(Controller.io_manager.import_song_safe)
 	_export_song_button.pressed.connect(Controller.io_manager.export_song)
 	
 	_pattern_size_stepper.value_changed.connect(_change_pattern_size)

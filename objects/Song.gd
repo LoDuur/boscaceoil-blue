@@ -77,6 +77,9 @@ const MAX_BPM := 450 # This is obscenely large.
 
 # Runtime properties.
 
+## Set by the loader when the file contained legacy filter automation data,
+## which is no longer supported and was discarded.
+var dropped_legacy_filter_data: bool = false
 var _dirty: bool = false
 
 

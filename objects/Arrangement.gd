@@ -168,6 +168,16 @@ func update_timeline_length() -> void:
 		timeline_length = 1
 
 
+## Returns true when no pattern is placed anywhere on the timeline.
+func is_empty() -> bool:
+	for i in timeline_length:
+		for j in CHANNEL_NUMBER:
+			if timeline_bars[i][j] != -1:
+				return false
+	
+	return true
+
+
 # Patterns.
 
 func get_pattern(bar_idx: int, channel_idx: int) -> int:

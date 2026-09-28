@@ -6,40 +6,38 @@
 
 extends MarginContainer
 
-const SHORCUTS_POPUP_SCENE := preload("res://gui/widgets/popups/ShortcutHelpPopup.tscn")
-
-var _shortcut_help: WindowPopup = null
+const SHORTCUT_LINE_SCENE := preload("res://gui/views/help_view/ShortcutLine.tscn")
 
 @onready var _navigate_back_button: BackButton = %NavigateBack
-@onready var _basic_guide_button: SquishyButton = %StartBasicGuide
-@onready var _advanced_guide_button: SquishyButton = %StartAdvancedGuide
-@onready var _show_shortcuts_button: SquishyButton = %ShowShortcutsButton
-@onready var _short_shortcut_list: VBoxContainer = %ShortShortcutList
-
-
-func _init() -> void:
-	_shortcut_help = SHORCUTS_POPUP_SCENE.instantiate()
+@onready var _columns: Array[VBoxContainer] = [ %LeftList, %RightList ]
 
 
 func _ready() -> void:
-	_shortcut_help.add_button("Close", _shortcut_help.close_popup)
-	
 	_navigate_back_button.pressed.connect(Controller.navigate_to.bind(Menu.NavigationTarget.FILE))
-	_basic_guide_button.pressed.connect(Controller.help_manager.start_guide.bind(HelpManager.GuideType.BASIC_GUIDE))
-	_advanced_guide_button.pressed.connect(Controller.help_manager.start_guide.bind(HelpManager.GuideType.ADVANCED_GUIDE))
-	_show_shortcuts_button.pressed.connect(_show_shortcuts)
-	
-	if not Engine.is_editor_hint():
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.HELP_VIEW, get_global_rect)
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.HELP_SHORTCUT_SHORTLIST, _short_shortcut_list.get_global_rect)
+	_build_shortcut_list()
 
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE:
-		if is_instance_valid(_shortcut_help):
-			_shortcut_help.queue_free()
-
-
-func _show_shortcuts() -> void:
-	# Extra size to compensate for some things.
-	Controller.show_window_popup(_shortcut_help, _shortcut_help.custom_minimum_size + Vector2(10, 10))
+func _build_shortcut_list() -> void:
+	for section in ShortcutTable.get_sections():
+		var column := _columns[clampi(section.column, 0, _columns.size() - 1)]
+		
+		var section_box := VBoxContainer.new()
+		section_box.theme_type_variation = &"CreditsSectionBox"
+		column.add_child(section_box)
+		
+		var title_label := Label.new()
+		title_label.theme_type_variation = &"CreditsLabelHeaderPanel"
+		title_label.text = section.title
+		section_box.add_child(title_label)
+		
+		var entry_list := VBoxContainer.new()
+		entry_list.theme_type_variation = &"CreditsBox"
+		section_box.add_child(entry_list)
+		
+		for entry in section.entries:
+			var line: ShortcutLine = SHORTCUT_LINE_SCENE.instantiate()
+			line.key_is_action = entry.is_action
+			line.key_text = entry.key
+			line.description_text = entry.description
+			line.hide_on_web = entry.hide_on_web
+			entry_list.add_child(line)

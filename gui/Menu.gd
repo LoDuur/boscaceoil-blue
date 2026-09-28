@@ -50,10 +50,6 @@ func _ready() -> void:
 	_tab_buttons.pressed.connect(_request_navigation)
 	
 	if not Engine.is_editor_hint():
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.NAVIGATION_FILE, _file_tab_button.get_global_rect)
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.NAVIGATION_ARRANGEMENT, _arrangement_tab_button.get_global_rect)
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.NAVIGATION_INSTRUMENT, _instrument_tab_button.get_global_rect)
-		
 		_fullscreen_toggle.pressed.connect(Controller.settings_manager.toggle_fullscreen)
 		get_window().size_changed.connect(_update_fullscreen_button)
 		

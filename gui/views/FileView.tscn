@@ -175,25 +175,18 @@ size_flags_horizontal = 3
 size_flags_vertical = 4
 text = "SAVE"
 
-[node name="ImportExport" type="HBoxContainer" parent="Layout/BaseControls/Rows"]
+[node name="ExportRow" type="HBoxContainer" parent="Layout/BaseControls/Rows"]
 auto_translate_mode = 1
 layout_mode = 2
 theme_type_variation = &"HBoxSpaced"
 alignment = 1
 
-[node name="ImportSong" parent="Layout/BaseControls/Rows/ImportExport" instance=ExtResource("3_6fmtw")]
+[node name="ExportSong" parent="Layout/BaseControls/Rows/ExportRow" instance=ExtResource("3_6fmtw")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-text = "IMPORT..."
-
-[node name="ExportSong" parent="Layout/BaseControls/Rows/ImportExport" instance=ExtResource("3_6fmtw")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-text = "EXPORT..."
+text = "EXPORT WAV..."
 
 [node name="PatternSettings" type="PanelContainer" parent="Layout/BaseControls/Rows"]
 layout_mode = 2

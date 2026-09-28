@@ -10,7 +10,6 @@ class_name Pattern extends Resource
 signal key_changed()
 signal scale_changed()
 signal instrument_changed()
-signal instrument_recording_toggled()
 signal note_added(note_data: Vector3i)
 signal notes_changed()
 
@@ -38,12 +37,6 @@ const MAX_NOTE_LENGTH := 128
 @export var note_amount: int = 0:
 	set(value): note_amount = ValueValidator.range(value, 0, MAX_NOTES_IN_PATTERN)
 
-## Flag whether the record filter is on.
-@export var record_instrument: bool = false
-## Filter values as triplets: volume, cutoff, resonance. There are exactly
-## Song.MAX_PATTERN_SIZE values.
-@export var recorded_instrument_values: Array[Vector3i] = []
-
 # Runtime properties.
 
 ## Simple sequential hash used when importing data from files.
@@ -59,9 +52,6 @@ func _init() -> void:
 	for i in MAX_NOTES_IN_PATTERN:
 		notes.push_back(Vector3i(-1, 0, 0))
 
-	for i in Song.MAX_PATTERN_SIZE:
-		recorded_instrument_values.push_back(Vector3i(Instrument.MAX_VOLUME, Instrument.MAX_FILTER_CUTOFF, 0))
-
 
 func clone() -> Pattern:
 	var cloned := Pattern.new()
@@ -73,12 +63,6 @@ func clone() -> Pattern:
 		var note := notes[note_index]
 		cloned.add_note(note.x, note.y, note.z, false)
 	cloned.reindex_active_notes()
-	
-	cloned.record_instrument = record_instrument
-	var filter_index := 0
-	for filter_value in recorded_instrument_values:
-		cloned.recorded_instrument_values[filter_index] = Vector3i(filter_value.x, filter_value.y, filter_value.z)
-		filter_index += 1
 	
 	return cloned
 
@@ -193,48 +177,6 @@ func change_instrument(new_idx: int, instrument: Instrument) -> Array[Vector3i]:
 	
 	instrument_changed.emit()
 	return affected_notes
-
-
-# Instrument recording.
-
-func toggle_record_instrument(enabled: bool) -> void:
-	record_instrument = enabled
-	
-	instrument_recording_toggled.emit()
-
-
-func get_instrument_filter(position: int) -> Vector2i:
-	if position < 0 || position >= Song.MAX_PATTERN_SIZE:
-		printerr("Pattern: Invalid note position for recorded values, %d is not in range (%d, %d)." % [ position, 0, Song.MAX_PATTERN_SIZE - 1 ])
-		return Vector2i(-1, -1)
-	
-	var recorded_data := recorded_instrument_values[position]
-	return Vector2i(recorded_data.y, recorded_data.z)
-
-
-func record_instrument_filter(position: int, cutoff: int, resonance: int) -> void:
-	if position < 0 || position >= Song.MAX_PATTERN_SIZE:
-		printerr("Pattern: Invalid note position for recorded values, %d is not in range (%d, %d)." % [ position, 0, Song.MAX_PATTERN_SIZE - 1 ])
-		return
-	
-	recorded_instrument_values[position].y = cutoff
-	recorded_instrument_values[position].z = resonance
-
-
-func get_instrument_volume(position: int) -> int:
-	if position < 0 || position >= Song.MAX_PATTERN_SIZE:
-		printerr("Pattern: Invalid note position for recorded values, %d is not in range (%d, %d)." % [ position, 0, Song.MAX_PATTERN_SIZE - 1 ])
-		return -1
-	
-	return recorded_instrument_values[position].x
-
-
-func record_instrument_volume(position: int, volume: int) -> void:
-	if position < 0 || position >= Song.MAX_PATTERN_SIZE:
-		printerr("Pattern: Invalid note position for recorded values, %d is not in range (%d, %d)." % [ position, 0, Song.MAX_PATTERN_SIZE - 1 ])
-		return
-	
-	recorded_instrument_values[position].x = volume
 
 
 # Note map.

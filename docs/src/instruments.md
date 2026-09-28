@@ -19,7 +19,7 @@ The instrument view is split into two parts: the instrument dock and the instrum
 
 You can only create up to 16 unique instruments.
 
-The newly added instrument is random, so you can discover something fresh every time! But you have full control over what you will use in the end. To the right of the dock is the configuration panel, where you can select a specific instrument, or roll the dice again and find another random one.
+The newly added instrument is a random melodic one (random picks never include drumkits or percussion), so you can discover something fresh every time! But you have full control over what you will use in the end. To the right of the dock is the configuration panel, where you can select a specific instrument, or roll the dice again and find another random one.
 
 Instruments are grouped into several categories, with the MIDI set being split even further due to its sheer size. The complete list of instrument categories is as follows:
 
@@ -80,27 +80,6 @@ Resonance, in turn, allows to additionally amplify the sound around the cutoff p
 <p class="warning">
 Some sounds produced this way may be unpleasant, especially at extreme values. Please take care and try lowering the volume first, or avoid using headphones until you understand what you can expect here.
 </p>
-
-
-## Instrument recording
-
-You can push instrument tuning even further than that! At the bottom of the [pattern editor](/notes_and_patterns.html) there is a mysterious `REC` button with a round icon. When clicked, the icon turns red and the instrument view opens — on the instrument that the edited pattern uses. A pinkish label `! RECORDING: PATTERN N !` also appears, as the tuning pads get a similarly pinkish frame.
-
-![](/images/instruments-recording.png)
-
-This feature is called instrument recording, and what it allows you to do is to set specific values for the low-pass filter and volume of the instrument for each individual tick of the pattern.
-
-While the recoding mode is enabled and the pattern is being played through, start changing the values using the tuning pads. As you move a pad head, you should notice a colorful trail that is left by it. Those are the values recorded for each note of the pattern, color-coded from red to green.
-
-![](/images/instruments-recording-values.png)
-
-If you disable the recording mode on the pattern, it reverts to using the default configuration of the instrument. But the recorded values are still stored, and you can re-enable the recording mode later.
-
-<p class="warning">
-Due to a bug in an older version of <em>Bosca Ceoil</em>, only the first 16 notes can retain their recorded values when the file is saved. <em>Bosca Ceoil Blue</em> aims to maintain compatibility with that version, so it maintains this bug as well. This will be addressed in a future major version of the app.
-</p>
-
-This is a fancy tool which can be very powerful, but it may take some time to master and find the use case for. Once again, try it and see if it gives you any inspiration!
 
 
 ## Adding audio effects

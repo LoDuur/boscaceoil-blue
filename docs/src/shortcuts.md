@@ -25,7 +25,7 @@ General shortcuts are available throughout the application.
 | <kbd>Ctrl/Cmd + Z</kbd>            | Undo the last action  |
 | <kbd>Shift + Ctrl/Cmd + Z</kbd>    | Redo the last undone action  |
 | <kbd>Ctrl/Cmd + F</kbd>            | Toggle fullscreen mode  |
-| <kbd>Esc</kbd>                     | Quit Bosca Ceoil (not available in browser)  |
+| <kbd>Ctrl/Cmd + E</kbd>            | Export the song as WAV  |
 
 
 ### Playback

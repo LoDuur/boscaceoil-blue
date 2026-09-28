@@ -40,14 +40,12 @@ enum DragSources {
 	INSTRUMENT_DOCK,
 }
 
-var debug_manager: DebugManager = null
 var settings_manager: SettingsManager = null
 var window_manager: WindowManager = null
 var state_manager: StateManager = null
 var voice_manager: VoiceManager = null
 var music_player: MusicPlayer = null
 var io_manager: IOManager = null
-var help_manager: HelpManager = null
 
 ## Current edited song.
 var current_song: Song = null
@@ -77,14 +75,12 @@ var _controls_locked: bool = false
 
 
 func _init() -> void:
-	debug_manager = DebugManager.new()
 	settings_manager = SettingsManager.new()
 	window_manager = WindowManager.new()
 	state_manager = StateManager.new()
 	voice_manager = VoiceManager.new()
 	music_player = MusicPlayer.new()
 	io_manager = IOManager.new()
-	help_manager = HelpManager.new()
 	
 	settings_manager.buffer_size_changed.connect(music_player.update_driver_buffer)
 	settings_manager.load_settings()
@@ -121,16 +117,7 @@ func _shortcut_input(event: InputEvent) -> void:
 	if _controls_locked:
 		return
 	
-	if event.is_action_pressed("bosca_exit", false, true):
-		# Ignore this shortcut on web, as it doesn't make much sense
-		# when you can close the tab. Even in fullscreen this probably
-		# isn't an expected path — Esc is usually used to exit the
-		# fullscreen.
-		
-		if not OS.has_feature("web"):
-			io_manager.check_song_on_exit(true)
-	
-	elif event.is_action_pressed("bosca_toggle_fullscreen", false, true):
+	if event.is_action_pressed("bosca_toggle_fullscreen", false, true):
 		settings_manager.toggle_fullscreen()
 		
 		get_viewport().set_input_as_handled()
@@ -176,6 +163,11 @@ func _shortcut_input(event: InputEvent) -> void:
 		
 		get_viewport().set_input_as_handled()
 	
+	elif event.is_action_pressed("bosca_export", false, true):
+		io_manager.export_song()
+		
+		get_viewport().set_input_as_handled()
+	
 	elif event.is_action_pressed("ui_undo", false, true):
 		if current_song:
 			state_manager.undo_state_change()
@@ -187,13 +179,6 @@ func _shortcut_input(event: InputEvent) -> void:
 			state_manager.do_state_change()
 		
 		get_viewport().set_input_as_handled()
-
-	else:
-		var debug_actions: Array[String] = [ "bosca_debug_1" ]
-		for i in debug_actions.size():
-			var action_name := debug_actions[i]
-			if event.is_action_pressed(action_name, false, true):
-				debug_manager.activate_debug(i)
 
 
 # Navigation.
@@ -283,22 +268,6 @@ func get_info_popup() -> InfoPopup:
 
 func show_window_popup(popup: WindowPopup, popup_size: Vector2) -> void:
 	popup.popup_anchored(Vector2(0.5, 0.5), popup_size, PopupManager.Direction.OMNI, true)
-
-
-func show_welcome_message() -> void:
-	var welcome_message := get_info_popup()
-	if not welcome_message:
-		return # Popup is busy.
-	
-	welcome_message.title = "WELCOME to Bosca Ceoil"
-	welcome_message.content = "Looks like this is your [accent]FIRST TIME[/accent]!\nWould you like a quick introduction?\n\n(You can access this tour later by clicking [accent]HELP[/accent].)"
-	welcome_message.add_button("NO", welcome_message.close_popup)
-	welcome_message.add_button("YES", func() -> void:
-		welcome_message.close_popup()
-		help_manager.start_guide(HelpManager.GuideType.BASIC_GUIDE)
-	)
-	
-	show_window_popup(welcome_message, Vector2(600, 200))
 
 
 func show_blocker() -> void:
@@ -677,7 +646,8 @@ func randomize_instrument(instrument_index: int) -> void:
 	if instrument_index != instrument_index_:
 		return
 
-	var voice_data := voice_manager.get_random_voice_data()
+	var current_voice := voice_manager.get_voice_data_at(current_song.instruments[instrument_index].voice_index)
+	var voice_data := voice_manager.get_random_voice_data(current_voice)
 	_set_current_instrument_by_voice(voice_data)
 
 

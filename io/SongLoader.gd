@@ -85,12 +85,7 @@ static func _load_v1(reader: SongFileReader) -> Song:
 		pattern.sort_notes()
 		pattern.reindex_active_notes()
 		
-		pattern.record_instrument = (reader.read_int() == 1)
-		if pattern.record_instrument:
-			for j in 16: # Patterns can only go up to 16 notes in this version.
-				pattern.recorded_instrument_values[j].x = reader.read_int() # Volume
-				pattern.recorded_instrument_values[j].y = reader.read_int() # Cutoff
-				pattern.recorded_instrument_values[j].z = reader.read_int() # Resonance
+		_skip_legacy_filter_block(reader, song)
 		
 		song.patterns.push_back(pattern)
 	
@@ -165,12 +160,7 @@ static func _load_v2(reader: SongFileReader) -> Song:
 		pattern.sort_notes()
 		pattern.reindex_active_notes()
 		
-		pattern.record_instrument = (reader.read_int() == 1)
-		if pattern.record_instrument:
-			for j in 16: # Patterns can only go up to 16 notes in this version.
-				pattern.recorded_instrument_values[j].x = reader.read_int() # Volume
-				pattern.recorded_instrument_values[j].y = reader.read_int() # Cutoff
-				pattern.recorded_instrument_values[j].z = reader.read_int() # Resonance
+		_skip_legacy_filter_block(reader, song)
 		
 		song.patterns.push_back(pattern)
 	
@@ -192,7 +182,7 @@ static func _load_v2(reader: SongFileReader) -> Song:
 	return song
 
 
-# Third version; includes global effects, patterns can go up to 32 notes (but recorded filter still only has 16 notes).
+# Third version; includes global effects, patterns can go up to 32 notes.
 static func _load_v3(reader: SongFileReader) -> Song:
 	var song := Song.new()
 	song.format_version = reader.get_version()
@@ -248,12 +238,7 @@ static func _load_v3(reader: SongFileReader) -> Song:
 		pattern.sort_notes()
 		pattern.reindex_active_notes()
 		
-		pattern.record_instrument = (reader.read_int() == 1)
-		if pattern.record_instrument:
-			for j in 16: # Due to a bug, only first 16 notes record their advanced filter values.
-				pattern.recorded_instrument_values[j].x = reader.read_int() # Volume
-				pattern.recorded_instrument_values[j].y = reader.read_int() # Cutoff
-				pattern.recorded_instrument_values[j].z = reader.read_int() # Resonance
+		_skip_legacy_filter_block(reader, song)
 		
 		song.patterns.push_back(pattern)
 	
@@ -273,6 +258,19 @@ static func _load_v3(reader: SongFileReader) -> Song:
 		printerr("SongLoader: Invalid song file at '%s' contains excessive data (%d)." % [ reader.get_path(), remainder ])
 	
 	return song
+
+
+# Formats 1–3 store an optional per-pattern block of filter automation values
+# (volume/cutoff/resonance for the first 16 notes). The feature was removed, so
+# the block is consumed to keep the reader aligned, and its values are discarded.
+static func _skip_legacy_filter_block(reader: SongFileReader, song: Song) -> void:
+	var has_block := reader.read_int() == 1
+	if not has_block:
+		return
+	
+	for j in 16 * 3:
+		reader.read_int()
+	song.dropped_legacy_filter_data = true
 
 
 class SongFileReader extends RefCounted:

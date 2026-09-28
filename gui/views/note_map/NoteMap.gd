@@ -84,9 +84,6 @@ func _ready() -> void:
 	_scrollbar.centered.connect(_center_scroll_offset)
 	
 	if not Engine.is_editor_hint():
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.PATTERN_EDITOR_NOTEMAP, get_global_available_rect)
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.PATTERN_EDITOR_SCROLLBAR, _scrollbar.get_global_rect)
-		
 		Controller.settings_manager.note_format_changed.connect(_update_gutter_size)
 		
 		Controller.song_loaded.connect(_update_song_sizes)
@@ -243,12 +240,6 @@ func get_available_rect() -> Rect2:
 	if _scrollbar:
 		available_rect.size.x -= _scrollbar.size.x
 	
-	return available_rect
-
-
-func get_global_available_rect() -> Rect2:
-	var available_rect := get_available_rect()
-	available_rect.position += global_position
 	return available_rect
 
 
