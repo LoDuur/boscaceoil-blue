@@ -81,9 +81,9 @@ const FIELDS := {
 var display_name: String = DEFAULT_NAME:
 	set(value):
 		display_name = CustomInstrument.sanitize_name(value)
-var palette: int = ColorPalette.PALETTE_CYAN:
+var palette: int = CustomColorPalette.PALETTE_CYAN:
 	set(value):
-		palette = ColorPalette.validate(value)
+		palette = CustomColorPalette.validate(value)
 
 ## Values of FIELDS, by name.
 var _values: Dictionary = {}
@@ -253,7 +253,7 @@ func read_fields(read_int: Callable) -> bool:
 		set_field(field, value)
 
 	var palette_value: int = read_int.call()
-	if palette_value != ColorPalette.validate(palette_value):
+	if palette_value != CustomColorPalette.validate(palette_value):
 		return false
 	palette = palette_value
 
@@ -294,7 +294,7 @@ static func from_dict(data: Dictionary) -> CustomInstrument:
 		var value := int(raw)
 
 		if field == "color_palette":
-			if value != ColorPalette.validate(value):
+			if value != CustomColorPalette.validate(value):
 				return null
 			instrument.palette = value
 		else:

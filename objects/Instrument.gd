@@ -79,7 +79,7 @@ func _get_name() -> String:
 
 ## Virtual.
 func _get_color_palette() -> int:
-	return _voice_data.color_palette if _voice_data else ColorPalette.PALETTE_GRAY
+	return _voice_data.color_palette if _voice_data else CustomColorPalette.PALETTE_GRAY
 
 
 func set_voice_data(voice_data: VoiceManager.VoiceData) -> void:

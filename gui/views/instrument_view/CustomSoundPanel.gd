@@ -12,13 +12,13 @@ const STEPPER_SCENE := preload("res://gui/widgets/Stepper.tscn")
 const OPTION_PICKER_SCENE := preload("res://gui/widgets/OptionPicker.tscn")
 
 const PALETTE_ORDER: Array[int] = [
-	ColorPalette.PALETTE_BLUE,
-	ColorPalette.PALETTE_PURPLE,
-	ColorPalette.PALETTE_RED,
-	ColorPalette.PALETTE_ORANGE,
-	ColorPalette.PALETTE_GREEN,
-	ColorPalette.PALETTE_CYAN,
-	ColorPalette.PALETTE_GRAY,
+	CustomColorPalette.PALETTE_BLUE,
+	CustomColorPalette.PALETTE_PURPLE,
+	CustomColorPalette.PALETTE_RED,
+	CustomColorPalette.PALETTE_ORANGE,
+	CustomColorPalette.PALETTE_GREEN,
+	CustomColorPalette.PALETTE_CYAN,
+	CustomColorPalette.PALETTE_GRAY,
 ]
 
 ## Stepper rows: field -> label.

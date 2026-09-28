@@ -1,14 +1,14 @@
-[gd_scene load_steps=8 format=3 uid="uid://d0lne8svx0ysl"]
+[gd_scene format=3 uid="uid://d0lne8svx0ysl"]
 
 [ext_resource type="PackedScene" uid="uid://jjkaxpgl6mmu" path="res://gui/widgets/AnimatedLogo.tscn" id="1_cb5p1"]
-[ext_resource type="Script" path="res://gui/views/FileView.gd" id="1_i5se4"]
+[ext_resource type="Script" uid="uid://dk0w2a31ektto" path="res://gui/views/FileView.gd" id="1_i5se4"]
 [ext_resource type="PackedScene" uid="uid://71sw1mddco3" path="res://gui/widgets/SquishyButton.tscn" id="3_6fmtw"]
 [ext_resource type="Texture2D" uid="uid://dxrpimbnhks71" path="res://assets/icons/play.png" id="4_nblwm"]
 [ext_resource type="Texture2D" uid="uid://82f8rwsfmuq8" path="res://assets/icons/pause.png" id="5_2i624"]
 [ext_resource type="Texture2D" uid="uid://y5ab1acbg8ka" path="res://assets/icons/stop.png" id="6_3jhgl"]
 [ext_resource type="PackedScene" uid="uid://d2peohvka6nmb" path="res://gui/widgets/Stepper.tscn" id="6_8p7iu"]
 
-[node name="FileView" type="MarginContainer"]
+[node name="FileView" type="MarginContainer" unique_id=88565426]
 auto_translate_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -17,34 +17,34 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_i5se4")
 
-[node name="Layout" type="HBoxContainer" parent="."]
+[node name="Layout" type="HBoxContainer" parent="." unique_id=356057859]
 layout_mode = 2
 
-[node name="FillerStart" type="Control" parent="Layout"]
+[node name="FillerStart" type="Control" parent="Layout" unique_id=1933164304]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Introduction" type="PanelContainer" parent="Layout"]
+[node name="Introduction" type="PanelContainer" parent="Layout" unique_id=1750435622]
 custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
 
-[node name="Contents" type="VBoxContainer" parent="Layout/Introduction"]
+[node name="Contents" type="VBoxContainer" parent="Layout/Introduction" unique_id=410246441]
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"VBoxSpaced"
 
-[node name="BoscaFlair" type="VBoxContainer" parent="Layout/Introduction/Contents"]
+[node name="BoscaFlair" type="VBoxContainer" parent="Layout/Introduction/Contents" unique_id=1992099304]
 layout_mode = 2
 
-[node name="Logo" parent="Layout/Introduction/Contents/BoscaFlair" instance=ExtResource("1_cb5p1")]
+[node name="Logo" parent="Layout/Introduction/Contents/BoscaFlair" unique_id=2041435736 instance=ExtResource("1_cb5p1")]
 custom_minimum_size = Vector2(454, 104)
 layout_mode = 2
 
-[node name="VersionFlair" type="HBoxContainer" parent="Layout/Introduction/Contents/BoscaFlair"]
+[node name="VersionFlair" type="HBoxContainer" parent="Layout/Introduction/Contents/BoscaFlair" unique_id=440267011]
 layout_mode = 2
 theme_type_variation = &"HBoxSpaced"
 
-[node name="VersionSubtitle" type="Label" parent="Layout/Introduction/Contents/BoscaFlair/VersionFlair"]
+[node name="VersionSubtitle" type="Label" parent="Layout/Introduction/Contents/BoscaFlair/VersionFlair" unique_id=491871068]
 unique_name_in_owner = true
 auto_translate_mode = 1
 layout_mode = 2
@@ -53,48 +53,92 @@ mouse_filter = 0
 theme_type_variation = &"SubtitleLabel"
 text = "The Blue Album"
 
-[node name="VersionNumber" type="Label" parent="Layout/Introduction/Contents/BoscaFlair/VersionFlair"]
+[node name="VersionNumber" type="Label" parent="Layout/Introduction/Contents/BoscaFlair/VersionFlair" unique_id=67918366]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"CreditsLabel"
 text = "vX.X flair"
 horizontal_alignment = 2
 
-[node name="Credit" type="Label" parent="Layout/Introduction/Contents"]
+[node name="Credit" type="Label" parent="Layout/Introduction/Contents" unique_id=1923607352]
 auto_translate_mode = 1
 layout_mode = 2
 theme_type_variation = &"CreditsLabel"
 text = "Created by Terry Cavanagh & Yuri Sizov"
 
-[node name="Controls" type="HBoxContainer" parent="Layout/Introduction/Contents"]
+[node name="Controls" type="HBoxContainer" parent="Layout/Introduction/Contents" unique_id=335294643]
 layout_mode = 2
 theme_type_variation = &"HBoxSpaced"
 
-[node name="Credits" parent="Layout/Introduction/Contents/Controls" instance=ExtResource("3_6fmtw")]
+[node name="Credits" parent="Layout/Introduction/Contents/Controls" unique_id=128375568 instance=ExtResource("3_6fmtw")]
 unique_name_in_owner = true
+oversampling_with_scale = 0
+custom_maximum_size = Vector2(-1, -1)
+propagate_maximum_size = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+offset_transform_enabled = false
+offset_transform_position = Vector2(0, 0)
+offset_transform_position_ratio = Vector2(0, 0)
+offset_transform_scale = Vector2(1, 1)
+offset_transform_rotation = 0.0
+offset_transform_pivot = Vector2(0, 0)
+offset_transform_pivot_ratio = Vector2(0.5, 0.5)
+offset_transform_visual_only = true
+translation_context = &""
+tooltip_auto_translate_mode = 0
+focus_behavior_recursive = 0
+mouse_behavior_recursive = 0
+accessibility_name = ""
+accessibility_description = ""
+accessibility_live = 0
+accessibility_controls_nodes = Array[NodePath]([])
+accessibility_described_by_nodes = Array[NodePath]([])
+accessibility_labeled_by_nodes = Array[NodePath]([])
+accessibility_flow_to_nodes = Array[NodePath]([])
 text = "CREDITS"
 
-[node name="Help" parent="Layout/Introduction/Contents/Controls" instance=ExtResource("3_6fmtw")]
+[node name="Help" parent="Layout/Introduction/Contents/Controls" unique_id=1755349788 instance=ExtResource("3_6fmtw")]
 unique_name_in_owner = true
+oversampling_with_scale = 0
+custom_maximum_size = Vector2(-1, -1)
+propagate_maximum_size = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+offset_transform_enabled = false
+offset_transform_position = Vector2(0, 0)
+offset_transform_position_ratio = Vector2(0, 0)
+offset_transform_scale = Vector2(1, 1)
+offset_transform_rotation = 0.0
+offset_transform_pivot = Vector2(0, 0)
+offset_transform_pivot_ratio = Vector2(0.5, 0.5)
+offset_transform_visual_only = true
+translation_context = &""
+tooltip_auto_translate_mode = 0
+focus_behavior_recursive = 0
+mouse_behavior_recursive = 0
+accessibility_name = ""
+accessibility_description = ""
+accessibility_live = 0
+accessibility_controls_nodes = Array[NodePath]([])
+accessibility_described_by_nodes = Array[NodePath]([])
+accessibility_labeled_by_nodes = Array[NodePath]([])
+accessibility_flow_to_nodes = Array[NodePath]([])
 text = "HELP"
 
-[node name="Playback" type="PanelContainer" parent="Layout/Introduction/Contents/Controls"]
+[node name="Playback" type="PanelContainer" parent="Layout/Introduction/Contents/Controls" unique_id=1879784209]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"WidgetPanel"
 
-[node name="Layout" type="HBoxContainer" parent="Layout/Introduction/Contents/Controls/Playback"]
+[node name="Layout" type="HBoxContainer" parent="Layout/Introduction/Contents/Controls/Playback" unique_id=1106308637]
 layout_mode = 2
 alignment = 1
 
-[node name="Play" type="Button" parent="Layout/Introduction/Contents/Controls/Playback/Layout"]
+[node name="Play" type="Button" parent="Layout/Introduction/Contents/Controls/Playback/Layout" unique_id=854402585]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 26)
 layout_mode = 2
@@ -105,7 +149,7 @@ flat = true
 icon_alignment = 1
 expand_icon = true
 
-[node name="Pause" type="Button" parent="Layout/Introduction/Contents/Controls/Playback/Layout"]
+[node name="Pause" type="Button" parent="Layout/Introduction/Contents/Controls/Playback/Layout" unique_id=1231264441]
 unique_name_in_owner = true
 auto_translate_mode = 1
 custom_minimum_size = Vector2(42, 26)
@@ -117,7 +161,7 @@ flat = true
 icon_alignment = 1
 expand_icon = true
 
-[node name="Stop" type="Button" parent="Layout/Introduction/Contents/Controls/Playback/Layout"]
+[node name="Stop" type="Button" parent="Layout/Introduction/Contents/Controls/Playback/Layout" unique_id=472619091]
 unique_name_in_owner = true
 auto_translate_mode = 1
 custom_minimum_size = Vector2(42, 26)
@@ -129,90 +173,173 @@ flat = true
 icon_alignment = 1
 expand_icon = true
 
-[node name="FillerMiddle" type="Control" parent="Layout"]
+[node name="FillerMiddle" type="Control" parent="Layout" unique_id=1296110261]
 auto_translate_mode = 1
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BaseControls" type="PanelContainer" parent="Layout"]
+[node name="BaseControls" type="PanelContainer" parent="Layout" unique_id=500902376]
 auto_translate_mode = 1
 custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
 
-[node name="Rows" type="VBoxContainer" parent="Layout/BaseControls"]
+[node name="Rows" type="VBoxContainer" parent="Layout/BaseControls" unique_id=1013624688]
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"VBoxSpaced"
 
-[node name="SongFileActions" type="HBoxContainer" parent="Layout/BaseControls/Rows"]
+[node name="SongFileActions" type="HBoxContainer" parent="Layout/BaseControls/Rows" unique_id=218973562]
 layout_mode = 2
 theme_type_variation = &"HBoxSpaced"
 alignment = 1
 
-[node name="CreateSong" parent="Layout/BaseControls/Rows/SongFileActions" instance=ExtResource("3_6fmtw")]
+[node name="CreateSong" parent="Layout/BaseControls/Rows/SongFileActions" unique_id=427614052 instance=ExtResource("3_6fmtw")]
 unique_name_in_owner = true
+oversampling_with_scale = 0
+custom_maximum_size = Vector2(-1, -1)
+propagate_maximum_size = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+offset_transform_enabled = false
+offset_transform_position = Vector2(0, 0)
+offset_transform_position_ratio = Vector2(0, 0)
+offset_transform_scale = Vector2(1, 1)
+offset_transform_rotation = 0.0
+offset_transform_pivot = Vector2(0, 0)
+offset_transform_pivot_ratio = Vector2(0.5, 0.5)
+offset_transform_visual_only = true
+translation_context = &""
+tooltip_auto_translate_mode = 0
+focus_behavior_recursive = 0
+mouse_behavior_recursive = 0
+accessibility_name = ""
+accessibility_description = ""
+accessibility_live = 0
+accessibility_controls_nodes = Array[NodePath]([])
+accessibility_described_by_nodes = Array[NodePath]([])
+accessibility_labeled_by_nodes = Array[NodePath]([])
+accessibility_flow_to_nodes = Array[NodePath]([])
 text = "NEW SONG"
 
-[node name="Layout" type="HBoxContainer" parent="Layout/BaseControls/Rows/SongFileActions"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"HBoxSpaced"
-
-[node name="LoadSong" parent="Layout/BaseControls/Rows/SongFileActions/Layout" instance=ExtResource("3_6fmtw")]
+[node name="LoadSong" parent="Layout/BaseControls/Rows/SongFileActions" unique_id=232512659 instance=ExtResource("3_6fmtw")]
 unique_name_in_owner = true
+oversampling_with_scale = 0
+custom_maximum_size = Vector2(-1, -1)
+propagate_maximum_size = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+offset_transform_enabled = false
+offset_transform_position = Vector2(0, 0)
+offset_transform_position_ratio = Vector2(0, 0)
+offset_transform_scale = Vector2(1, 1)
+offset_transform_rotation = 0.0
+offset_transform_pivot = Vector2(0, 0)
+offset_transform_pivot_ratio = Vector2(0.5, 0.5)
+offset_transform_visual_only = true
+translation_context = &""
+tooltip_auto_translate_mode = 0
+focus_behavior_recursive = 0
+mouse_behavior_recursive = 0
+accessibility_name = ""
+accessibility_description = ""
+accessibility_live = 0
+accessibility_controls_nodes = Array[NodePath]([])
+accessibility_described_by_nodes = Array[NodePath]([])
+accessibility_labeled_by_nodes = Array[NodePath]([])
+accessibility_flow_to_nodes = Array[NodePath]([])
 text = "LOAD"
 
-[node name="SaveSong" parent="Layout/BaseControls/Rows/SongFileActions/Layout" instance=ExtResource("3_6fmtw")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-text = "SAVE"
-
-[node name="ExportRow" type="HBoxContainer" parent="Layout/BaseControls/Rows"]
+[node name="ExportRow" type="HBoxContainer" parent="Layout/BaseControls/Rows" unique_id=2012807888]
 auto_translate_mode = 1
 layout_mode = 2
 theme_type_variation = &"HBoxSpaced"
 alignment = 1
 
-[node name="ExportSong" parent="Layout/BaseControls/Rows/ExportRow" instance=ExtResource("3_6fmtw")]
+[node name="ExportSong" parent="Layout/BaseControls/Rows/ExportRow" unique_id=1369896963 instance=ExtResource("3_6fmtw")]
 unique_name_in_owner = true
+oversampling_with_scale = 0
+custom_maximum_size = Vector2(-1, -1)
+propagate_maximum_size = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+offset_transform_enabled = false
+offset_transform_position = Vector2(0, 0)
+offset_transform_position_ratio = Vector2(0, 0)
+offset_transform_scale = Vector2(1, 1)
+offset_transform_rotation = 0.0
+offset_transform_pivot = Vector2(0, 0)
+offset_transform_pivot_ratio = Vector2(0.5, 0.5)
+offset_transform_visual_only = true
+translation_context = &""
+tooltip_auto_translate_mode = 0
+focus_behavior_recursive = 0
+mouse_behavior_recursive = 0
+accessibility_name = ""
+accessibility_description = ""
+accessibility_live = 0
+accessibility_controls_nodes = Array[NodePath]([])
+accessibility_described_by_nodes = Array[NodePath]([])
+accessibility_labeled_by_nodes = Array[NodePath]([])
+accessibility_flow_to_nodes = Array[NodePath]([])
 text = "EXPORT WAV..."
 
-[node name="PatternSettings" type="PanelContainer" parent="Layout/BaseControls/Rows"]
+[node name="SaveSong" parent="Layout/BaseControls/Rows/ExportRow" unique_id=1310344552 instance=ExtResource("3_6fmtw")]
+unique_name_in_owner = true
+oversampling_with_scale = 0
+custom_maximum_size = Vector2(-1, -1)
+propagate_maximum_size = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+offset_transform_enabled = false
+offset_transform_position = Vector2(0, 0)
+offset_transform_position_ratio = Vector2(0, 0)
+offset_transform_scale = Vector2(1, 1)
+offset_transform_rotation = 0.0
+offset_transform_pivot = Vector2(0, 0)
+offset_transform_pivot_ratio = Vector2(0.5, 0.5)
+offset_transform_visual_only = true
+translation_context = &""
+tooltip_auto_translate_mode = 0
+focus_behavior_recursive = 0
+mouse_behavior_recursive = 0
+accessibility_name = ""
+accessibility_description = ""
+accessibility_live = 0
+accessibility_controls_nodes = Array[NodePath]([])
+accessibility_described_by_nodes = Array[NodePath]([])
+accessibility_labeled_by_nodes = Array[NodePath]([])
+accessibility_flow_to_nodes = Array[NodePath]([])
+text = "SAVE"
+
+[node name="PatternSettings" type="PanelContainer" parent="Layout/BaseControls/Rows" unique_id=2059595746]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"WidgetPanel"
 
-[node name="Layout" type="HBoxContainer" parent="Layout/BaseControls/Rows/PatternSettings"]
+[node name="Layout" type="HBoxContainer" parent="Layout/BaseControls/Rows/PatternSettings" unique_id=1187572125]
 layout_mode = 2
 theme_type_variation = &"HBoxSpaced"
 alignment = 1
 
-[node name="Label" type="Label" parent="Layout/BaseControls/Rows/PatternSettings/Layout"]
+[node name="Label" type="Label" parent="Layout/BaseControls/Rows/PatternSettings/Layout" unique_id=706064380]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "PATTERN"
 uppercase = true
 
-[node name="BarStepper" parent="Layout/BaseControls/Rows/PatternSettings/Layout" instance=ExtResource("6_8p7iu")]
+[node name="BarStepper" parent="Layout/BaseControls/Rows/PatternSettings/Layout" unique_id=868509741 instance=ExtResource("6_8p7iu")]
 unique_name_in_owner = true
 layout_mode = 2
 value = 4
 min_value = 1
 max_value = 32
 
-[node name="PatternStepper" parent="Layout/BaseControls/Rows/PatternSettings/Layout" instance=ExtResource("6_8p7iu")]
+[node name="PatternStepper" parent="Layout/BaseControls/Rows/PatternSettings/Layout" unique_id=1093460416 instance=ExtResource("6_8p7iu")]
 unique_name_in_owner = true
 auto_translate_mode = 1
 layout_mode = 2
@@ -220,33 +347,33 @@ value = 16
 min_value = 1
 max_value = 32
 
-[node name="BPMSettings" type="PanelContainer" parent="Layout/BaseControls/Rows"]
+[node name="BPMSettings" type="PanelContainer" parent="Layout/BaseControls/Rows" unique_id=871251220]
 auto_translate_mode = 1
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"WidgetPanel"
 
-[node name="Layout" type="HBoxContainer" parent="Layout/BaseControls/Rows/BPMSettings"]
+[node name="Layout" type="HBoxContainer" parent="Layout/BaseControls/Rows/BPMSettings" unique_id=566502344]
 layout_mode = 2
 theme_type_variation = &"HBoxSpaced"
 alignment = 1
 
-[node name="Label" type="Label" parent="Layout/BaseControls/Rows/BPMSettings/Layout"]
+[node name="Label" type="Label" parent="Layout/BaseControls/Rows/BPMSettings/Layout" unique_id=867897761]
 auto_translate_mode = 1
 layout_mode = 2
 size_flags_horizontal = 3
 text = "BPM"
 uppercase = true
 
-[node name="BPMStepper" parent="Layout/BaseControls/Rows/BPMSettings/Layout" instance=ExtResource("6_8p7iu")]
+[node name="BPMStepper" parent="Layout/BaseControls/Rows/BPMSettings/Layout" unique_id=693181045 instance=ExtResource("6_8p7iu")]
 unique_name_in_owner = true
 layout_mode = 2
 value = 120
 min_value = 10
 max_value = 450
 
-[node name="FillerEnd" type="Control" parent="Layout"]
+[node name="FillerEnd" type="Control" parent="Layout" unique_id=205106600]
 auto_translate_mode = 1
 layout_mode = 2
 size_flags_horizontal = 3

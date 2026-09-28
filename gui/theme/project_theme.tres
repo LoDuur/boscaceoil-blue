@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=81 format=3 uid="uid://chpsnl8o0raaf"]
+[gd_resource type="Theme" format=3 uid="uid://chpsnl8o0raaf"]
 
 [ext_resource type="Texture2D" uid="uid://n8jw4gat8tg7" path="res://assets/icons/arrow_down_small.png" id="1_1ij5d"]
 [ext_resource type="Texture2D" uid="uid://d2aswndmtik56" path="res://assets/overlap-dither.png" id="1_4kypt"]
