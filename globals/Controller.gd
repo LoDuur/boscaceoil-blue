@@ -30,6 +30,7 @@ signal editor_focus_changed()
 signal history_navigated()
 ## Emitted when pending placements (paste/duplicate ghosts, drags) must be dropped.
 signal ghost_cancel_requested()
+signal follow_playback_changed()
 ## Emitted when a custom instrument's sound parameters change.
 signal custom_instrument_sound_changed(instrument_index: int)
 ## Emitted after a whole-pattern transform; before and after are index-aligned,
@@ -74,6 +75,8 @@ var current_instrument_index: int = -1
 
 ## Grid editor that receives keyboard editing actions, set on mouse press.
 var editor_focus: EditorFocus = EditorFocus.NONE
+## Whether the arrangement scrolls along with the playback.
+var follow_playback: bool = false
 ## In-app clipboards; they survive pattern switches.
 var note_clipboard: GridClipboard = GridClipboard.new()
 var arrangement_clipboard: GridClipboard = GridClipboard.new()
@@ -580,6 +583,110 @@ func delete_pattern(pattern_index: int) -> void:
 	)
 	
 	state_manager.commit_state_change(song_state)
+
+
+func set_follow_playback(enabled: bool) -> void:
+	if follow_playback == enabled:
+		return
+	
+	follow_playback = enabled
+	follow_playback_changed.emit()
+
+
+## Indices of patterns that aren't placed anywhere in the arrangement. At
+## least one pattern always remains.
+func get_unused_pattern_indices() -> Array[int]:
+	var used := {}
+	var arrangement := current_song.arrangement
+	for bar_index in arrangement.timeline_length:
+		for channel in Arrangement.CHANNEL_NUMBER:
+			used[arrangement.timeline_bars[bar_index][channel]] = true
+	
+	var unused: Array[int] = []
+	for i in current_song.patterns.size():
+		if not used.has(i):
+			unused.push_back(i)
+	if unused.size() == current_song.patterns.size():
+		unused.remove_at(0)
+	return unused
+
+
+func remove_unused_patterns_safe() -> void:
+	if not current_song:
+		return
+	
+	var unused := get_unused_pattern_indices()
+	if unused.is_empty():
+		update_status("NO UNUSED PATTERNS", StatusLevel.INFO)
+		return
+	
+	var confirmation := get_info_popup()
+	if not confirmation:
+		return # Popup is busy.
+	
+	confirmation.title = "Remove unused patterns"
+	confirmation.content = "[accent]%d %s[/accent] %s not placed in the arrangement.\n\nRemove %s? (CTRL + Z to undo)" % [ unused.size(), "PATTERN" if unused.size() == 1 else "PATTERNS", "is" if unused.size() == 1 else "are", "it" if unused.size() == 1 else "them" ]
+	confirmation.add_button("Cancel", confirmation.close_popup)
+	confirmation.add_button("Remove", func() -> void:
+		confirmation.close_popup()
+		remove_unused_patterns()
+	)
+	show_window_popup(confirmation, Vector2(560, 190))
+
+
+## Deletes every unused pattern as one undoable change, renumbering the
+## arrangement's references to the remaining ones.
+func remove_unused_patterns() -> void:
+	if not current_song:
+		return
+	
+	var unused := get_unused_pattern_indices()
+	if unused.is_empty():
+		return
+	
+	# Map old indices of the remaining patterns to their new ones.
+	var index_map := {}
+	var next_index := 0
+	for i in current_song.patterns.size():
+		if not unused.has(i):
+			index_map[i] = next_index
+			next_index += 1
+	
+	var forward_changes := {}
+	var backward_changes := {}
+	var arrangement := current_song.arrangement
+	for bar_index in arrangement.timeline_length:
+		for channel in Arrangement.CHANNEL_NUMBER:
+			var pattern_index: int = arrangement.timeline_bars[bar_index][channel]
+			if pattern_index >= 0 && index_map[pattern_index] != pattern_index:
+				forward_changes[Vector2i(bar_index, channel)] = index_map[pattern_index]
+				backward_changes[Vector2i(bar_index, channel)] = pattern_index
+	
+	var removed_patterns: Array[Pattern] = []
+	for i in unused:
+		removed_patterns.push_back(current_song.patterns[i])
+	var previous_pattern_index := current_pattern_index
+	var next_pattern_index: int = index_map.get(current_pattern_index, 0)
+	
+	var song_state := state_manager.create_state_change(StateManager.StateChangeType.SONG)
+	# The arrangement must never reference a missing pattern, even between
+	# steps: renumber before removing, and restore patterns before renumbering back.
+	song_state.add_do_action(func() -> void:
+		current_song.arrangement.apply_cell_changes(forward_changes)
+		for j in range(unused.size() - 1, -1, -1):
+			_untrack_pattern_changes(unused[j])
+			current_song.remove_pattern(unused[j])
+		_change_current_pattern(next_pattern_index, true, true)
+	)
+	song_state.add_undo_action(func() -> void:
+		for j in unused.size():
+			current_song.add_pattern(removed_patterns[j], unused[j])
+		current_song.arrangement.apply_cell_changes(backward_changes)
+		_change_current_pattern(previous_pattern_index, true, true)
+	)
+	
+	state_manager.commit_state_change(song_state)
+	update_status("%d UNUSED %s REMOVED" % [ unused.size(), "PATTERN" if unused.size() == 1 else "PATTERNS" ], StatusLevel.SUCCESS)
 
 
 func delete_pattern_nocheck(pattern_index: int) -> void:

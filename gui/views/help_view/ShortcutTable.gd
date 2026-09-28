@@ -91,8 +91,8 @@ static func get_sections() -> Array[Section]:
 	section.text("MIDDLE CLICK", "Insert an empty bar")
 	section.text("SHIFT + LEFT CLICK", "Insert an empty bar")
 	section.text("RIGHT CLICK", "Remove the bar")
-	section.action("ui_copy", "Copy selected bars")
-	section.action("ui_paste", "Paste copied bars")
+	section.action("bosca_copy", "Copy selected bars")
+	section.action("bosca_paste", "Paste copied bars")
 	sections.push_back(section)
 	
 	return sections

@@ -23,7 +23,7 @@ General shortcuts are available throughout the application.
 | <kbd>Ctrl/Cmd + S</kbd>            | Save the current song  |
 | <kbd>Ctrl/Cmd + Alt + S</kbd>      | Save the current song as a copy  |
 | <kbd>Ctrl/Cmd + Z</kbd>            | Undo the last action  |
-| <kbd>Shift + Ctrl/Cmd + Z</kbd>    | Redo the last undone action  |
+| <kbd>Shift + Ctrl/Cmd + Z</kbd>, <kbd>Ctrl/Cmd + Y</kbd>    | Redo the last undone action  |
 | <kbd>Ctrl/Cmd + F</kbd>            | Toggle fullscreen mode  |
 | <kbd>Ctrl/Cmd + E</kbd>            | Export the song as WAV  |
 
@@ -36,6 +36,26 @@ General shortcuts are available throughout the application.
 | <kbd>Ctrl/Cmd + Spacebar</kbd>    | Pause/Resume (keeps the current position)  |
 
 
+## Editing
+
+These work in the pattern editor and on the arrangement grid alike. Keyboard editing goes to the grid you clicked last, marked with a thin yellow border.
+
+| Combination  | Description  |
+|--------------|--------------|
+| <kbd>Ctrl/Cmd + A</kbd>          | Select everything  |
+| <kbd>Ctrl/Cmd + C</kbd>          | Copy the selection  |
+| <kbd>Ctrl/Cmd + X</kbd>          | Cut the selection  |
+| <kbd>Ctrl/Cmd + V</kbd>          | Paste; the items follow the cursor until you click  |
+| <kbd>Ctrl/Cmd + D</kbd>          | Duplicate the selection (keeps what's copied)  |
+| <kbd>Delete</kbd>, <kbd>Backspace</kbd>    | Delete the selection  |
+| <kbd>Enter</kbd>                 | Place pasted or duplicated items  |
+| <kbd>Esc</kbd>                   | Cancel placing or dragging, otherwise clear the selection  |
+| <kbd>Arrows</kbd>                | Move the selection (scroll when nothing is selected)  |
+| <kbd>Shift + Arrows</kbd>        | Move the selection by a bar/octave (notes) or 4 cells (arrangement)  |
+
+_Note:_ <kbd>Esc</kbd> no longer quits the app. Use the window's close button or your system's quit shortcut.
+
+
 ## Patterns
 
 Shortcuts related to editing note patterns.
@@ -45,8 +65,8 @@ Shortcuts related to editing note patterns.
 | Combination  | Description  |
 |--------------|--------------|
 | <kbd>Mouse Wheel</kbd>    | Scroll the pattern view up or down  |
-| <kbd>Arrow Up</kbd>       | Scroll the pattern view up  |
-| <kbd>Arrow Down</kbd>     | Scroll the pattern view down  |
+| <kbd>Arrow Up</kbd>       | Scroll the pattern view up (when nothing is selected)  |
+| <kbd>Arrow Down</kbd>     | Scroll the pattern view down (when nothing is selected)  |
 
 _Hint:_ <kbd>Double Click</kbd> on the scroll bar on the right to center the pattern view!
 
@@ -54,24 +74,35 @@ _Hint:_ <kbd>Double Click</kbd> on the scroll bar on the right to center the pat
 
 | Combination  | Description  |
 |--------------|--------------|
-| <kbd>Left Click</kbd>                | Draw a note (notes can partially overlap, but not at the start)  |
+| <kbd>Left Click</kbd>                | Draw a note on an empty cell, or select the clicked note  |
+| <kbd>Alt + Left Click</kbd>          | Draw a note even on top of another note  |
 | <kbd>Right Click</kbd>               | Erase the note starting at the cursor  |
 | <kbd>Ctrl/Cmd + Mouse Wheel</kbd>    | Change the size of the note cursor  |
-| <kbd>Ctrl/Cmd + Arrow Right</kbd>    | Make the note cursor bigger  |
-| <kbd>Ctrl/Cmd + Arrow Left</kbd>     | Make the note cursor smaller  |
+| <kbd>]</kbd>                         | Make the note cursor bigger  |
+| <kbd>[</kbd>                         | Make the note cursor smaller  |
 | <kbd>Ctrl/Cmd + Left Click</kbd>     | Set the note cursor to the length of the clicked note  |
 
 _Hint:_ Click on an empty space to reset the size of the note cursor back to 1.
 
-### Pattern stamping
+### Selecting and moving notes
 
 | Combination  | Description  |
 |--------------|--------------|
-| <kbd>Shift + Left Click</kbd>    | Select the clicked note (hold and drag to select multiple notes)  |
-| <kbd>Ctrl/Cmd + C</kbd>          | Copy selected notes  |
-| <kbd>Ctrl/Cmd + V</kbd>          | Paste copied notes at the cursor (starting from the bottom left)  |
+| <kbd>Shift + Left Click</kbd>          | Add or remove the clicked note from the selection  |
+| <kbd>Shift + Drag</kbd>                | Select notes in an area (adds to the selection)  |
+| <kbd>Drag</kbd> a selected note        | Move the selection  |
+| <kbd>Ctrl/Cmd + Drag</kbd> a selected note    | Copy the selection  |
+| <kbd>Alt + Arrow Left/Right</kbd>      | Shorten or lengthen the selected notes  |
 
-_Hint:_ This works across different patterns too!
+_Hint:_ Copied notes can be pasted into a different pattern too!
+
+### Shifting the whole pattern
+
+| Combination  | Description  |
+|--------------|--------------|
+| <kbd>Ctrl/Cmd + Arrow Up/Down</kbd>            | Shift every note up or down one step of the scale  |
+| <kbd>Ctrl/Cmd + Shift + Arrow Up/Down</kbd>    | Shift every note up or down an octave  |
+| <kbd>Ctrl/Cmd + Arrow Left/Right</kbd>         | Shift every note one tick earlier or later (wraps around)  |
 
 
 ## Arrangement
@@ -83,20 +114,25 @@ Shortcuts related to creating pattern arrangements.
 | Combination  | Description  |
 |--------------|--------------|
 | <kbd>Mouse Wheel</kbd>            | Scroll the arrangement grid/timeline  |
-| <kbd>Arrow Left</kbd>             | Scroll the arrangement grid to the left  |
-| <kbd>Arrow Right</kbd>            | Scroll the arrangement grid to the right  |
+| <kbd>Arrow Left</kbd>             | Scroll the arrangement grid to the left (when nothing is selected)  |
+| <kbd>Arrow Right</kbd>            | Scroll the arrangement grid to the right (when nothing is selected)  |
 | <kbd>Shift + Mouse Wheel</kbd>    | Change the scale of the arrangement grid  |
 
 ### Arrangement building
 
-Drag'n'drop patterns from the dock on the right to add them to the grid. Drag'n'drop patterns on the grid to copy them to a different bar.
+Drag'n'drop patterns from the dock on the right to add them to the grid.
 
 | Combination  | Description  |
 |--------------|--------------|
-| <kbd>Right Click</kbd>         | Remove the clicked pattern  |
-| <kbd>Ctrl/Cmd + D</kbd>        | Replace the pattern at the cursor with a new variant  |
-
-Or hold <kbd>Alt</kbd> while dragging/clicking on the grid to create a pattern variant!
+| <kbd>Left Click</kbd>            | Select the clicked pattern and edit it  |
+| <kbd>Shift + Left Click</kbd>    | Add or remove the clicked pattern from the selection  |
+| <kbd>Shift + Drag</kbd>          | Select patterns in an area  |
+| <kbd>Drag</kbd>                  | Move the selected patterns  |
+| <kbd>Ctrl/Cmd + Drag</kbd>       | Copy the selected patterns  |
+| <kbd>Alt + Drag</kbd>, <kbd>Alt + Left Click</kbd>    | Create a pattern variant  |
+| <kbd>Right Click</kbd>           | Remove the clicked pattern  |
+| <kbd>Ctrl/Cmd + Shift + D</kbd>  | Replace the pattern at the cursor with a new variant  |
+| <kbd>Ctrl/Cmd + D</kbd>          | Duplicate the selection, or the pattern at the cursor  |
 
 
 ## Timeline

@@ -129,8 +129,10 @@ func _ready() -> void:
 		
 		Controller.music_player.playback_tick.connect(_update_playback_cursor)
 		Controller.music_player.playback_stopped.connect(_update_playback_cursor)
+		# Exporting always follows the playback; otherwise it's the user's choice.
 		Controller.music_player.export_started.connect(func() -> void: _following_playback_cursor = true)
-		Controller.music_player.export_ended.connect(func() -> void: _following_playback_cursor = false)
+		Controller.music_player.export_ended.connect(func() -> void: _following_playback_cursor = Controller.follow_playback)
+		Controller.follow_playback_changed.connect(func() -> void: _following_playback_cursor = Controller.follow_playback)
 		
 		Controller.editor_focus_changed.connect(_update_focus_state)
 		Controller.history_navigated.connect(_selection.clear)

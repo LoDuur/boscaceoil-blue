@@ -34,11 +34,15 @@ Just like notes in patterns conform to a metronome, ticking away at regular inte
 
 _Bosca Ceoil Blue_ automatically keeps track of every bar that you fill with patterns, and when the time comes to [export your song](/export_import.html), everything that you've added up to that moment will be included. Keep in mind, that the maximum length of any song is 1000 bars.
 
-To add a pattern to the arrangement, drag and drop it from the pattern dock, or <kbd>Left Click</kbd> and drag one of the existing patterns on the grid onto another cell, making a copy. Hold <kbd>Alt</kbd> as you do this, and instead of a copy a new variant of the original pattern will be created. You can also simply <kbd>Alt + Left Click</kbd> on a pattern to turn it into a variant.
+To add a pattern to the arrangement, drag and drop it from the pattern dock. Patterns already on the grid can be selected like notes: click one (<kbd>Shift</kbd> toggles it), or <kbd>Shift</kbd> + drag from an empty cell to select an area. Dragging a pattern **moves** the selection; hold <kbd>Ctrl/Cmd</kbd> to copy it instead. Hold <kbd>Alt</kbd> as you drag, and a new variant of the original pattern is created at the target. You can also simply <kbd>Alt + Left Click</kbd> on a pattern to turn it into a variant.
+
+The same keyboard editing as in the pattern editor works here: copy, cut, paste and duplicate (<kbd>Ctrl/Cmd + D</kbd> with nothing selected duplicates the pattern under the cursor), <kbd>Delete</kbd> to clear cells (the patterns stay in the dock), and the arrow keys to move the selection (<kbd>Shift</kbd> moves by 4).
 
 <p class="warning">
-If your operating system intercepts <kbd>Alt + Left Click</kbd>, you can also create a variant by hovering over a pattern and pressing <kbd>Ctrl/Cmd + D</kbd>.
+If your operating system intercepts <kbd>Alt + Left Click</kbd>, you can also create a variant by hovering over a pattern and pressing <kbd>Ctrl/Cmd + Shift + D</kbd>.
 </p>
+
+Below the pattern dock, `REMOVE UNUSED` deletes every pattern that isn't placed in the arrangement (after a confirmation, and undoable), and `FOLLOW` makes the grid scroll along with the playback.
 
 <kbd>Right Click</kbd> removes the clicked pattern from the grid. This doesn't delete the pattern, however, and you can still use it later.
 

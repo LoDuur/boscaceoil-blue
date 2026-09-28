@@ -263,7 +263,7 @@ static func _load_v3(reader: SongFileReader) -> Song:
 
 
 # Fourth version; instruments are typed and can be custom, patterns have no
-# instrument recording block. See SongSaver for the layout. Unlike older
+# legacy filter automation block. See SongSaver for the layout. Unlike older
 # loaders, structural errors (unknown voices, dangling indices) fail the load.
 static func _load_v4(reader: SongFileReader) -> Song:
 	var song := Song.new()

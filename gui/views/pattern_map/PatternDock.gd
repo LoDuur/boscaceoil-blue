@@ -33,7 +33,17 @@ func _ready() -> void:
 	_update_theme()
 	theme_changed.connect(_update_theme)
 	
+	var follow_button := add_extra_button("")
+	follow_button.toggle_mode = true
+	follow_button.tooltip_text = "Scroll the arrangement along with the playback"
+	follow_button.toggled.connect(_toggle_follow_playback.bind(follow_button))
+	_toggle_follow_playback(false, follow_button)
+	
+	var cleanup_button := add_extra_button("REMOVE UNUSED")
+	cleanup_button.tooltip_text = "Delete patterns that aren't placed in the arrangement"
+	
 	if not Engine.is_editor_hint():
+		cleanup_button.pressed.connect(Controller.remove_unused_patterns_safe)
 		item_created.connect(Controller.create_and_edit_pattern)
 		item_selected.connect(Controller.edit_pattern)
 		item_deleted.connect(Controller.delete_pattern)
@@ -42,6 +52,12 @@ func _ready() -> void:
 		Controller.song_pattern_created.connect(queue_redraw)
 		Controller.song_pattern_changed.connect(queue_redraw)
 		Controller.song_sizes_changed.connect(queue_redraw)
+
+
+func _toggle_follow_playback(enabled: bool, button: SquishyButton) -> void:
+	button.text = "FOLLOW: ON" if enabled else "FOLLOW: OFF"
+	if not Engine.is_editor_hint():
+		Controller.set_follow_playback(enabled)
 
 
 func _update_theme() -> void:

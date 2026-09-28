@@ -54,7 +54,7 @@ static func save(song: Song, path: String) -> bool:
 #   then per bar in the timeline: 8 channel values (pattern index or -1)
 #
 # Compared to v3, instruments start with their type (v3 wrote it second and
-# ignored it), and patterns no longer carry the instrument recording block.
+# ignored it), and patterns no longer carry the legacy filter automation block.
 static func _write(writer: SongFileWriter, song: Song) -> void:
 	# Basic information.
 	
