@@ -327,30 +327,6 @@ border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0, 0, 0, 1)
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cf8hl"]
-content_margin_left = 2.0
-content_margin_top = 2.0
-content_margin_right = 2.0
-content_margin_bottom = 2.0
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cxepd"]
-content_margin_left = 2.0
-content_margin_top = 2.0
-content_margin_right = 2.0
-content_margin_bottom = 2.0
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7otdp"]
-content_margin_left = 2.0
-content_margin_top = 2.0
-content_margin_right = 2.0
-content_margin_bottom = 2.0
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ivbq4"]
-content_margin_left = 2.0
-content_margin_top = 2.0
-content_margin_right = 2.0
-content_margin_bottom = 2.0
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wn2nf"]
 content_margin_left = 12.0
 content_margin_top = 1.0
@@ -439,6 +415,33 @@ content_margin_bottom = 8.0
 base_font = ExtResource("9_cvewl")
 spacing_glyph = 1
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slidertrack"]
+content_margin_top = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0.0980392, 0.12549, 0.133333, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sliderfill"]
+content_margin_top = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0.427451, 0.521569, 0.552941, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sliderfillhl"]
+content_margin_top = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0.737255, 0.784314, 0.8, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
 [resource]
 default_font = SubResource("FontVariation_ktmxc")
 default_font_size = 16
@@ -497,6 +500,9 @@ HBoxContainer/constants/separation = 0
 HBoxSpaced/base_type = &"HBoxContainer"
 HBoxSpaced/constants/separation = 20
 HSeparator/styles/separator = SubResource("StyleBoxLine_rqga1")
+HSlider/styles/grabber_area = SubResource("StyleBoxFlat_sliderfill")
+HSlider/styles/grabber_area_highlight = SubResource("StyleBoxFlat_sliderfillhl")
+HSlider/styles/slider = SubResource("StyleBoxFlat_slidertrack")
 HelpMarginContainer/base_type = &"MarginContainer"
 HelpMarginContainer/constants/margin_bottom = 8
 HelpMarginContainer/constants/margin_left = 12
@@ -665,13 +671,6 @@ ScrollbarButton/styles/hover = SubResource("StyleBoxFlat_7qnyx")
 ScrollbarButton/styles/normal = SubResource("StyleBoxFlat_on2ux")
 ScrollbarButton/styles/pressed = SubResource("StyleBoxFlat_np3ou")
 SpinBox/icons/updown = ExtResource("9_2yuvf")
-StepperBox/base_type = &"HBoxContainer"
-StepperBox/constants/separation = 12
-StepperButton/base_type = &"Button"
-StepperButton/styles/disabled = SubResource("StyleBoxEmpty_cf8hl")
-StepperButton/styles/hover = SubResource("StyleBoxEmpty_cxepd")
-StepperButton/styles/normal = SubResource("StyleBoxEmpty_7otdp")
-StepperButton/styles/pressed = SubResource("StyleBoxEmpty_ivbq4")
 SubtitleLabel/base_type = &"Label"
 SubtitleLabel/colors/font_color = Color(0.446651, 0.71472, 0.926644, 1)
 SubtitleLabel/colors/font_shadow_color = Color(0, 0, 0, 1)
@@ -692,6 +691,8 @@ VScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_0noio")
 VScrollBar/styles/scroll = SubResource("StyleBoxFlat_3jpdy")
 VScrollBar/styles/scroll_focus = SubResource("StyleBoxFlat_bivqn")
 VSeparator/styles/separator = SubResource("StyleBoxLine_m646a")
+ValueSliderBox/base_type = &"HBoxContainer"
+ValueSliderBox/constants/separation = 12
 WidgetPanel/base_type = &"PanelContainer"
 WidgetPanel/styles/panel = SubResource("StyleBoxFlat_cjrsp")
 WindowPopup/base_type = &"Control"

@@ -25,21 +25,30 @@ func _ready() -> void:
 	Controller.music_player.stop_playback()
 	var settings := _find(main, "InstrumentSettings.gd")
 	var dock := _find(main, "InstrumentDock.gd")
-	var custom_button := dock.get_node_or_null("AddCustomItem") as SquishyButton
-	_check(custom_button != null, "NEW CUSTOM button exists")
+	_check(dock.get_node_or_null("AddCustomItem") == null, "no NEW CUSTOM dock button")
+	
+	# Add a normal instrument, then pick CUSTOM in the type drop-down.
 	var before := Controller.current_song.instruments.size()
-	custom_button.pressed.emit()
+	Controller.create_and_edit_instrument()
 	await get_tree().process_frame
-	_check(Controller.current_song.instruments.size() == before + 1, "NEW CUSTOM adds exactly one instrument: %d" % Controller.current_song.instruments.size())
-	_check(Controller.get_current_instrument() is CustomInstrument, "new one is custom and selected")
+	_check(Controller.current_song.instruments.size() == before + 1 && not (Controller.get_current_instrument() is CustomInstrument), "ADD NEW makes a preset instrument")
+	var category_picker: OptionPicker = settings._category_picker
+	var custom_item: OptionListPopup.Item = null
+	for item in category_picker.options:
+		if item.text == "CUSTOM":
+			custom_item = item
+	_check(custom_item != null, "CUSTOM is listed in the type drop-down")
+	category_picker._accept_selected(custom_item)
+	await get_tree().process_frame
+	_check(Controller.current_song.instruments.size() == before + 1, "picking CUSTOM converts, not adds")
+	_check(Controller.get_current_instrument() is CustomInstrument, "current instrument is now custom")
 	var panel: Control = settings._sound_panel
 	_check(panel.visible, "sound panel visible for custom")
 	_check(settings._category_picker.get_selected() != null && settings._category_picker.get_selected().text == "CUSTOM", "category shows CUSTOM")
-	# Edit through the panel's stepper.
-	var stepper: Stepper = panel._steppers["attack_rate"]
-	stepper.value = 20
-	stepper.value_changed.emit()
-	_check((Controller.get_current_instrument() as CustomInstrument).get_field("attack_rate") == 20, "stepper edits field")
+	# Edit through the panel's slider, as a user drag would.
+	var slider: ValueSlider = panel._sliders["attack_rate"]
+	slider._slider.value = 20
+	_check((Controller.get_current_instrument() as CustomInstrument).get_field("attack_rate") == 20, "slider edits field live")
 	# Mode switch hides/shows dual rows.
 	panel._commit_field("osc_mode", 1)
 	await get_tree().process_frame

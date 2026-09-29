@@ -37,7 +37,8 @@ The custom instrument library test only touches the files it creates.
 | `Phase4Tests` | Arrangement on the real `Main.tscn`: moves, copy/paste, delete, drag move/copy/variant, focus release. |
 | `Phase5Tests` | File format v4: byte-identical round trip, invalid files rejected, v3 upgrade. |
 | `Phase6Tests` | Custom instruments: voice building, preset isolation, clamping, undo, randomize, round trip, library. |
-| `Phase6UiTests` | NEW CUSTOM button, CUSTOM category and sound panel on the real `Main.tscn`. |
+| `Phase6UiTests` | CUSTOM category in the type drop-down (no dock button) and the sound panel on the real `Main.tscn`. |
 | `Phase6WavTests` | WAV export with a custom instrument is audible and identical after save and reload. |
 | `Phase7Tests` | Removing unused patterns (with undo/redo) and the follow-playback toggle. |
+| `ValueSliderTests` | The slider widget (silent set, commit on drag end, held-key settling, live mode, clamping) and its use for BPM, pattern size, bar size and swing; the filter/volume pads stay pads. |
 | `HelpTests` | Every shortcut on the Help page resolves to a real binding. |

@@ -8,7 +8,7 @@
 ## the Controller as undoable changes; the panel only mirrors the instrument.
 extends VBoxContainer
 
-const STEPPER_SCENE := preload("res://gui/widgets/Stepper.tscn")
+const VALUE_SLIDER_SCENE := preload("res://gui/widgets/ValueSlider.tscn")
 const OPTION_PICKER_SCENE := preload("res://gui/widgets/OptionPicker.tscn")
 
 const PALETTE_ORDER: Array[int] = [
@@ -21,19 +21,19 @@ const PALETTE_ORDER: Array[int] = [
 	CustomColorPalette.PALETTE_GRAY,
 ]
 
-## Stepper rows: field -> label.
-const OSCILLATOR_STEPPERS := {
+## Slider rows: field -> label.
+const OSCILLATOR_SLIDERS := {
 	"dual_connection": "LINK",
 	"dual_balance": "BALANCE",
 	"dual_detune": "DETUNE",
 }
-const ENVELOPE_STEPPERS := {
+const ENVELOPE_SLIDERS := {
 	"attack_rate": "ATTACK",
 	"decay_rate": "DECAY",
 	"sustain_level": "SUSTAIN",
-	"sustain_rate": "SUS. DECAY",
+	"sustain_rate": "SUS. RATE",
 	"release_rate": "RELEASE",
-	"total_level": "ATTENUATE",
+	"total_level": "ATTEN.",
 	"vibrato_depth": "VIBRATO",
 }
 ## Fields only used with two oscillators.
@@ -47,7 +47,7 @@ var _palette_buttons: Array[Button] = []
 var _save_button: Button = null
 var _mode_picker: OptionPicker = null
 var _wave_pickers: Dictionary = {} # field -> OptionPicker
-var _steppers: Dictionary = {} # field -> Stepper
+var _sliders: Dictionary = {} # field -> ValueSlider
 var _row_nodes: Dictionary = {} # field -> Array[Control]
 var _envelope_preview: EnvelopePreview = null
 
@@ -60,11 +60,11 @@ func _build() -> void:
 	# Identity.
 
 	var identity_row := HBoxContainer.new()
-	identity_row.theme_type_variation = &"HBoxSpaced"
+	identity_row.add_theme_constant_override("separation", 6)
 	add_child(identity_row)
 
 	_name_edit = LineEdit.new()
-	_name_edit.custom_minimum_size = Vector2(220, 0)
+	_name_edit.custom_minimum_size = Vector2(110, 0)
 	_name_edit.max_length = CustomInstrument.MAX_NAME_LENGTH
 	_name_edit.placeholder_text = "Instrument name"
 	_name_edit.text_submitted.connect(func(_text: String) -> void: _commit_name())
@@ -73,7 +73,7 @@ func _build() -> void:
 
 	for palette in PALETTE_ORDER:
 		var swatch := Button.new()
-		swatch.custom_minimum_size = Vector2(22, 22)
+		swatch.custom_minimum_size = Vector2(18, 18)
 		swatch.focus_mode = Control.FOCUS_NONE
 		swatch.toggle_mode = true
 		swatch.tooltip_text = "Instrument color"
@@ -93,7 +93,8 @@ func _build() -> void:
 		_palette_buttons.push_back(swatch)
 
 	_save_button = Button.new()
-	_save_button.text = "SAVE TO LIBRARY"
+	_save_button.text = "SAVE"
+	_save_button.tooltip_text = "Save this instrument to the library, to reuse it in other songs"
 	_save_button.focus_mode = Control.FOCUS_NONE
 	_save_button.pressed.connect(_save_to_library)
 	identity_row.add_child(_save_button)
@@ -115,23 +116,25 @@ func _build() -> void:
 	_mode_picker = _add_picker(oscillator_grid, "MODE", "osc_mode", [ [ "Single", CustomInstrument.OscillatorMode.SINGLE ], [ "Dual", CustomInstrument.OscillatorMode.DUAL ] ])
 	_wave_pickers["wave1"] = _add_picker(oscillator_grid, "WAVE 1", "wave1", CustomInstrument.WAVEFORMS)
 	_wave_pickers["wave2"] = _add_picker(oscillator_grid, "WAVE 2", "wave2", CustomInstrument.WAVEFORMS)
-	for field: String in OSCILLATOR_STEPPERS:
-		_add_stepper(oscillator_grid, OSCILLATOR_STEPPERS[field], field)
+	for field: String in OSCILLATOR_SLIDERS:
+		_add_slider(oscillator_grid, OSCILLATOR_SLIDERS[field], field)
 
 	var envelope_column := VBoxContainer.new()
 	columns.add_child(envelope_column)
 	var envelope_grid := _add_grid(envelope_column)
-	for field: String in ENVELOPE_STEPPERS:
-		_add_stepper(envelope_grid, ENVELOPE_STEPPERS[field], field)
+	for field: String in ENVELOPE_SLIDERS:
+		_add_slider(envelope_grid, ENVELOPE_SLIDERS[field], field)
 
 	_envelope_preview = EnvelopePreview.new()
-	_envelope_preview.custom_minimum_size = Vector2(160, 48)
+	_envelope_preview.custom_minimum_size = Vector2(120, 36)
 	envelope_column.add_child(_envelope_preview)
 
 
 func _add_grid(parent: Control) -> GridContainer:
 	var grid := GridContainer.new()
 	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 2)
 	parent.add_child(grid)
 	return grid
 
@@ -147,7 +150,7 @@ func _add_picker(grid: GridContainer, label_text: String, field: String, entries
 	var label := _add_label(grid, label_text)
 
 	var picker: OptionPicker = OPTION_PICKER_SCENE.instantiate()
-	picker.custom_minimum_size = Vector2(150, 0)
+	picker.custom_minimum_size = Vector2(90, 0)
 	grid.add_child(picker)
 
 	for entry: Array in entries:
@@ -166,17 +169,21 @@ func _add_picker(grid: GridContainer, label_text: String, field: String, entries
 	return picker
 
 
-func _add_stepper(grid: GridContainer, label_text: String, field: String) -> void:
+func _add_slider(grid: GridContainer, label_text: String, field: String) -> void:
 	var label := _add_label(grid, label_text)
 
-	var stepper: Stepper = STEPPER_SCENE.instantiate()
-	stepper.min_value = CustomInstrument.FIELDS[field][0]
-	stepper.max_value = CustomInstrument.FIELDS[field][1]
-	grid.add_child(stepper)
-	stepper.value_changed.connect(func() -> void: _commit_field(field, stepper.value))
+	var slider: ValueSlider = VALUE_SLIDER_SCENE.instantiate()
+	slider.min_value = CustomInstrument.FIELDS[field][0]
+	slider.max_value = CustomInstrument.FIELDS[field][1]
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.slider_width = 60.0
+	# Edits of a field merge into one undo step, so they can apply live and be heard as they're made.
+	slider.emit_while_dragging = true
+	grid.add_child(slider)
+	slider.value_changed.connect(func() -> void: _commit_field(field, slider.value))
 
-	_steppers[field] = stepper
-	_row_nodes[field] = [ label, stepper ]
+	_sliders[field] = slider
+	_row_nodes[field] = [ label, slider ]
 
 
 # Sync with the instrument.
@@ -199,8 +206,8 @@ func refresh() -> void:
 	_select_picker_item(_mode_picker, _instrument.get_field("osc_mode"))
 	for field: String in _wave_pickers:
 		_select_picker_item(_wave_pickers[field], _instrument.get_field(field))
-	for field: String in _steppers:
-		(_steppers[field] as Stepper).value = _instrument.get_field(field)
+	for field: String in _sliders:
+		(_sliders[field] as ValueSlider).value = _instrument.get_field(field)
 
 	var is_dual := _instrument.get_field("osc_mode") == CustomInstrument.OscillatorMode.DUAL
 	for field in DUAL_FIELDS:

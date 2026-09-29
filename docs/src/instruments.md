@@ -84,14 +84,14 @@ Some sounds produced this way may be unpleasant, especially at extreme values. P
 
 ## Custom instruments
 
-Besides presets, you can build your own oscillator-based instruments. Press `NEW CUSTOM` under the instrument dock, or pick the `CUSTOM` category for an existing instrument. The preset list is then replaced by a sound panel:
+Besides presets, you can build your own oscillator-based instruments. Pick the `CUSTOM` category in the type drop-down for the instrument you are editing. The preset list is then replaced by a sound panel:
 
 - **Oscillator**: `SINGLE` or `DUAL` mode and a waveform for each oscillator. With two oscillators you can also set how they are linked, their balance, and a detune of up to one semitone either way.
 - **Envelope**: attack, decay, sustain level, sustain decay and release (higher rates are faster), plus an overall attenuation. A small curve sketches the shape.
 - **Vibrato**: a constant pitch wobble of up to one semitone.
 - **Identity**: a name (up to 24 characters) and a color.
 
-The low-pass filter and volume pads work the same as for presets. While the song is stopped, every change plays a short note so you can hear it. Every change can be undone, and holding a stepper counts as a single change. The `RANDOM` button rolls new sound settings for a custom instrument instead of switching it to a preset.
+The low-pass filter and volume pads work the same as for presets. While the song is stopped, every change plays a short note so you can hear it. Every change can be undone, and dragging a slider counts as a single change. The `RANDOM` button rolls new sound settings for a custom instrument instead of switching it to a preset.
 
 Custom instruments are stored inside the song file, so a song sounds the same on any machine. To reuse one in other songs, press `SAVE TO LIBRARY`. Saved instruments appear under the `CUSTOM` category's list, next to the other custom instruments in the song; picking one copies it into the edited instrument.
 

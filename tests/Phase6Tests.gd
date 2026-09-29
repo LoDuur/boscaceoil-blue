@@ -46,7 +46,8 @@ func _ready() -> void:
 	
 	# Controller flow: create, edit (accumulated), undo.
 	var count := Controller.current_song.instruments.size()
-	Controller.create_custom_instrument()
+	Controller.create_and_edit_instrument()
+	Controller.set_current_instrument_custom()
 	var idx := Controller.current_instrument_index
 	_check(Controller.current_song.instruments.size() == count + 1 && Controller.get_current_instrument() is CustomInstrument, "created custom")
 	Controller.set_custom_instrument_field(idx, "attack_rate", 50)
@@ -58,8 +59,8 @@ func _ready() -> void:
 	_check(ci.get_field("attack_rate") == 63, "one undo for accumulated edits: %d" % ci.get_field("attack_rate"))
 	Controller.set_custom_instrument_name(idx, "  Soft Pluck with a very long name that overflows  ")
 	_check(ci.display_name == "Soft Pluck with a very l", "name sanitized: '%s'" % ci.display_name)
-	Controller.set_custom_instrument_palette(idx, ColorPalette.PALETTE_RED)
-	_check(ci.color_palette == ColorPalette.PALETTE_RED && ci.category == "CUSTOM", "identity")
+	Controller.set_custom_instrument_palette(idx, CustomColorPalette.PALETTE_RED)
+	_check(ci.color_palette == CustomColorPalette.PALETTE_RED && ci.category == "CUSTOM", "identity")
 	
 	# Randomize never leaves custom; 200 rolls stay in range.
 	for i in 200:
@@ -78,7 +79,7 @@ func _ready() -> void:
 	song.instruments.push_back(Controller.instance_instrument_by_voice(Controller.voice_manager.get_first_voice_data("DRUMKIT")))
 	var c1 := CustomInstrument.new()
 	c1.display_name = "Grüße ♪"
-	c1.palette = ColorPalette.PALETTE_GRAY
+	c1.palette = CustomColorPalette.PALETTE_GRAY
 	c1.set_field("osc_mode", 1)
 	c1.set_field("dual_detune", -12)
 	c1.volume = 100

@@ -70,7 +70,7 @@ The buttons below the grid shift every note of the pattern at once: up or down b
 
 ### Action history
 
-You can always undo any recent change. The application remembers the last 200 actions that you performed, and allows you to step back and forth through these actions. Press <kbd>Ctrl/Cmd + Z</kbd> to undo an action, and <kbd>Shift + Ctrl/Cmd + Z</kbd> or <kbd>Ctrl/Cmd + Y</kbd> to redo the last undone action. Holding an arrow key or a stepper counts as one action. This applies to everything you do in _Bosca Ceoil Blue_, not just placing notes.
+You can always undo any recent change. The application remembers the last 200 actions that you performed, and allows you to step back and forth through these actions. Press <kbd>Ctrl/Cmd + Z</kbd> to undo an action, and <kbd>Shift + Ctrl/Cmd + Z</kbd> or <kbd>Ctrl/Cmd + Y</kbd> to redo the last undone action. Holding an arrow key or dragging a slider counts as one action. This applies to everything you do in _Bosca Ceoil Blue_, not just placing notes.
 
 
 ## Key and scale

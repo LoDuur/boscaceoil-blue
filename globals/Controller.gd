@@ -1103,30 +1103,6 @@ func _replace_current_instrument(make_instrument: Callable) -> void:
 
 # Custom instruments.
 
-func create_custom_instrument() -> void:
-	if not current_song:
-		return
-	if current_song.instruments.size() >= Song.MAX_INSTRUMENT_COUNT:
-		update_status("INSTRUMENT LIMIT REACHED (%d)" % [ Song.MAX_INSTRUMENT_COUNT ], StatusLevel.WARNING)
-		return
-	
-	var song_state := state_manager.create_state_change(StateManager.StateChangeType.SONG)
-	var state_context := song_state.get_context()
-	state_context["id"] = -1
-	
-	song_state.add_do_action(func() -> void:
-		state_context.id = current_song.instruments.size()
-		current_song.add_instrument(CustomInstrument.new())
-		song_instrument_created.emit()
-	)
-	song_state.add_undo_action(func() -> void:
-		delete_instrument_nocheck(state_context.id)
-	)
-	
-	state_manager.commit_state_change(song_state)
-	_change_current_instrument(current_song.instruments.size() - 1)
-
-
 ## Turns the current instrument into a custom one, copying the source
 ## definition, or using defaults when there is none.
 func set_current_instrument_custom(source: CustomInstrument = null) -> void:

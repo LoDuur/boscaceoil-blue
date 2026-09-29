@@ -6,7 +6,7 @@
 
 class_name ButtonHolder extends RefCounted
 
-## Stepper is accelerated to make it easier to scroll through the range of values.
+## Holding a button is accelerated to make it easier to scroll through a range of values.
 ## These are arbitrary fine-tuned values.
 const HOLD_THRESHOLDS := [ 0.4, 0.36, 0.3, 0.2, 0.088, 0.042 ]
 

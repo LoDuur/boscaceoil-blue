@@ -10,7 +10,7 @@ set -u
 
 GODOT="${GODOT:-godot}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-SUITES=(Phase1Tests Phase2Tests Phase3Tests Phase4Tests Phase5Tests Phase6Tests Phase6UiTests Phase6WavTests Phase7Tests HelpTests)
+SUITES=(Phase1Tests Phase2Tests Phase3Tests Phase4Tests Phase5Tests Phase6Tests Phase6UiTests Phase6WavTests Phase7Tests ValueSliderTests HelpTests)
 STRICT=0
 [[ "${1:-}" == "--strict" ]] && STRICT=1
 

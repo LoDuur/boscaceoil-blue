@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://dxrpimbnhks71" path="res://assets/icons/play.png" id="4_nblwm"]
 [ext_resource type="Texture2D" uid="uid://82f8rwsfmuq8" path="res://assets/icons/pause.png" id="5_2i624"]
 [ext_resource type="Texture2D" uid="uid://y5ab1acbg8ka" path="res://assets/icons/stop.png" id="6_3jhgl"]
-[ext_resource type="PackedScene" uid="uid://d2peohvka6nmb" path="res://gui/widgets/Stepper.tscn" id="6_8p7iu"]
+[ext_resource type="PackedScene" path="res://gui/widgets/ValueSlider.tscn" id="6_8p7iu"]
 
 [node name="FileView" type="MarginContainer" unique_id=88565426]
 auto_translate_mode = 1
@@ -332,14 +332,14 @@ size_flags_horizontal = 3
 text = "PATTERN"
 uppercase = true
 
-[node name="BarStepper" parent="Layout/BaseControls/Rows/PatternSettings/Layout" unique_id=868509741 instance=ExtResource("6_8p7iu")]
+[node name="BarSlider" parent="Layout/BaseControls/Rows/PatternSettings/Layout" unique_id=868509741 instance=ExtResource("6_8p7iu")]
 unique_name_in_owner = true
 layout_mode = 2
 value = 4
 min_value = 1
 max_value = 32
 
-[node name="PatternStepper" parent="Layout/BaseControls/Rows/PatternSettings/Layout" unique_id=1093460416 instance=ExtResource("6_8p7iu")]
+[node name="PatternSlider" parent="Layout/BaseControls/Rows/PatternSettings/Layout" unique_id=1093460416 instance=ExtResource("6_8p7iu")]
 unique_name_in_owner = true
 auto_translate_mode = 1
 layout_mode = 2
@@ -366,7 +366,7 @@ size_flags_horizontal = 3
 text = "BPM"
 uppercase = true
 
-[node name="BPMStepper" parent="Layout/BaseControls/Rows/BPMSettings/Layout" unique_id=693181045 instance=ExtResource("6_8p7iu")]
+[node name="BPMSlider" parent="Layout/BaseControls/Rows/BPMSettings/Layout" unique_id=693181045 instance=ExtResource("6_8p7iu")]
 unique_name_in_owner = true
 layout_mode = 2
 value = 120
