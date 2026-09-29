@@ -8,10 +8,6 @@ In the following article we give an overview for every part of the user interfac
 
 If you want to jump right into compositing, check [Notes and Patterns](/notes_and_patterns.html) next!
 
-If you'd rather learn with practice, _Bosca Ceoil Blue_ features an interactive guide built right into the app itself! Go to `FILE > HELP` and press `BASIC GUIDE` to get started.
-
-![](/images/overview-builtin-guide.png)
-
 
 ## Bosca Ceoil, a step sequencer
 
@@ -44,9 +40,9 @@ The file view is the first upper panel that you see when you open _Bosca Ceoil_.
 
 ![](/images/overview-file-view.png)
 
-The file view provides access to basic file operations (creating new songs, saving and loading, exporting and importing), key song settings (BPM/tempo, pattern and bar sizes), and playback controls. It also let's you view the built-in help and the credits list.
+The file view provides access to basic file operations (creating new songs, saving and loading, exporting), key song settings (BPM/tempo, pattern and bar sizes), and playback controls. It also lets you view the shortcut reference (`HELP`) and the credits list.
 
-Most of these features are self-explanatory. You can learn more about song settings in [Notes and Patterns](/notes_and_patterns.html) and [Arrangements](/arrangements.html). Read more about exporting and importing in [Export and Import](/export_import.html).
+Most of these features are self-explanatory. You can learn more about song settings in [Notes and Patterns](/notes_and_patterns.html) and [Arrangements](/arrangements.html). Read more about exporting in [Exporting](/export_import.html).
 
 
 ### Pattern editor
@@ -59,7 +55,7 @@ The pattern editor consists of a note grid and additional editing tools below it
 
 The columns in the grid represent units of time as the pattern progresses. By default, there are 16 units in one pattern. That number can be configured in the [file view](#file-view). Notes can be placed on this grid taking any number of whole cells. Notes can also extend beyond the pattern view, but must always start on one of the pattern cells.
 
-Below the grid are configuration options for the edited pattern: the assigned instrument, the key, the scale. There are also buttons to shift all the notes higher or lower. Finally, you can enable instrument recording, an advanced tuning technique, from the bottom panel (read more in [Instruments](/instruments.html)).
+Below the grid are configuration options for the edited pattern: the assigned instrument, the key, the scale. There are also buttons to shift all the notes higher or lower.
 
 ![](/images/overview-pattern-editor-drums.png)
 

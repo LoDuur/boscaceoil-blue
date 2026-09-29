@@ -16,13 +16,13 @@ var _tween: Tween = null
 var _default_position: Vector2 = Vector2.ZERO
 
 var _themed_logos: Dictionary = {
-	ColorPalette.PALETTE_BLUE   : preload("res://assets/logos/logo_blue.png"),
-	ColorPalette.PALETTE_PURPLE : preload("res://assets/logos/logo_purple.png"),
-	ColorPalette.PALETTE_RED    : preload("res://assets/logos/logo_red.png"),
-	ColorPalette.PALETTE_ORANGE : preload("res://assets/logos/logo_orange.png"),
-	ColorPalette.PALETTE_GREEN  : preload("res://assets/logos/logo_green.png"),
-	ColorPalette.PALETTE_CYAN   : preload("res://assets/logos/logo_cyan.png"),
-	ColorPalette.PALETTE_GRAY   : preload("res://assets/logos/logo_gray.png"),
+	CustomColorPalette.PALETTE_BLUE   : preload("res://assets/logos/logo_blue.png"),
+	CustomColorPalette.PALETTE_PURPLE : preload("res://assets/logos/logo_purple.png"),
+	CustomColorPalette.PALETTE_RED    : preload("res://assets/logos/logo_red.png"),
+	CustomColorPalette.PALETTE_ORANGE : preload("res://assets/logos/logo_orange.png"),
+	CustomColorPalette.PALETTE_GREEN  : preload("res://assets/logos/logo_green.png"),
+	CustomColorPalette.PALETTE_CYAN   : preload("res://assets/logos/logo_cyan.png"),
+	CustomColorPalette.PALETTE_GRAY   : preload("res://assets/logos/logo_gray.png"),
 }
 
 @onready var _logo: TextureRect = $Logo
@@ -64,7 +64,7 @@ func _handle_instrument() -> void:
 	if _themed_logos.has(instrument.color_palette):
 		_logo.texture = _themed_logos[instrument.color_palette]
 	else:
-		_logo.texture = _themed_logos[ColorPalette.PALETTE_GRAY]
+		_logo.texture = _themed_logos[CustomColorPalette.PALETTE_GRAY]
 
 
 func _handle_beat() -> void:

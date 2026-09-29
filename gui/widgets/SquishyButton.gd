@@ -151,13 +151,6 @@ func _has_point(point: Vector2) -> bool:
 	return visual_rect.has_point(point)
 
 
-func get_global_visual_rect() -> Rect2:
-	var visual_rect := Rect2(Vector2.ZERO, size).expand(_panel_position)
-	visual_rect.position += global_position
-	
-	return visual_rect
-
-
 # Text.
 
 func set_text(value: String) -> void:

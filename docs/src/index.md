@@ -19,6 +19,10 @@ _Bosca Ceoil Blue_ is available as a [download for all desktop platforms](https:
 
 The hosted version of this documentation covers functionality of the most recent stable release. Older versions can be viewed via GitHub (e.g., [version 3.1](https://github.com/YuriSizov/boscaceoil-blue/tree/3.1-stable/docs)), including pre-release versions.
 
+### Song files
+
+This fork saves songs in file format **v4**, which adds custom instruments and drops instrument recording. Songs made with the original _Bosca Ceoil_ or upstream _Bosca Ceoil Blue_ (formats v1–v3) still open; any instrument recording data they contain is discarded with a warning. Once saved, a song is written as v4 and no longer opens in those apps. The app tells you once, the first time an older file is overwritten.
+
 Versions prior to 3.0 (i.e. original _Bosca Ceoil_) are not covered by this documentation, however general concepts of _Bosca Ceoil_ remain unchanged and you can loosely apply the information found here to any version.
 
 

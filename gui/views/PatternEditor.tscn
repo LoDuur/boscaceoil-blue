@@ -1,11 +1,12 @@
-[gd_scene load_steps=7 format=3 uid="uid://byfh0p3nqrosa"]
+[gd_scene load_steps=8 format=3 uid="uid://byfh0p3nqrosa"]
 
 [ext_resource type="Script" path="res://gui/views/PatternEditor.gd" id="1_eqswn"]
 [ext_resource type="PackedScene" uid="uid://dciyoa2wkbtfp" path="res://gui/views/note_map/NoteMap.tscn" id="1_jt24t"]
 [ext_resource type="PackedScene" uid="uid://dpno0cpboqdm0" path="res://gui/widgets/OptionPicker.tscn" id="3_g46lg"]
 [ext_resource type="Texture2D" uid="uid://34gjffqqcubk" path="res://assets/icons/plus.png" id="4_67s6m"]
-[ext_resource type="Texture2D" uid="uid://3r61aokrspvu" path="res://assets/icons/record.png" id="4_pyo8q"]
 [ext_resource type="Texture2D" uid="uid://os3udjkncg7b" path="res://assets/icons/minus.png" id="5_0tk4a"]
+[ext_resource type="Texture2D" uid="uid://dreol4dav8ocg" path="res://assets/icons/arrow_left_small.png" id="6_shl"]
+[ext_resource type="Texture2D" uid="uid://bu4ylhahtvclx" path="res://assets/icons/arrow_right_small.png" id="7_shr"]
 
 [node name="PatternEditor" type="VBoxContainer"]
 auto_translate_mode = 1
@@ -46,24 +47,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"PatternSettingsBar"
 
-[node name="RecordInstrumentLabel" type="Label" parent="PatternSettings/PropertyBar/ButtonBar"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "REC"
-
-[node name="RecordInstrument" type="Button" parent="PatternSettings/PropertyBar/ButtonBar"]
-unique_name_in_owner = true
-auto_translate_mode = 1
-custom_minimum_size = Vector2(24, 24)
-layout_mode = 2
-focus_mode = 0
-theme_type_variation = &"RecordButton"
-toggle_mode = true
-icon = ExtResource("4_pyo8q")
-flat = true
-icon_alignment = 1
-expand_icon = true
-
 [node name="Control" type="Control" parent="PatternSettings/PropertyBar/ButtonBar"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -76,6 +59,7 @@ unique_name_in_owner = true
 auto_translate_mode = 1
 custom_minimum_size = Vector2(36, 26)
 layout_mode = 2
+tooltip_text = "Shift all notes up one step (Ctrl/Cmd + Up)"
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"IncrementButton"
@@ -89,10 +73,39 @@ unique_name_in_owner = true
 auto_translate_mode = 1
 custom_minimum_size = Vector2(36, 26)
 layout_mode = 2
+tooltip_text = "Shift all notes down one step (Ctrl/Cmd + Down)"
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"IncrementButton"
 icon = ExtResource("5_0tk4a")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[node name="NoteShiftLeft" type="Button" parent="PatternSettings/PropertyBar/ButtonBar/NoteShiftBar"]
+unique_name_in_owner = true
+auto_translate_mode = 1
+custom_minimum_size = Vector2(36, 26)
+layout_mode = 2
+tooltip_text = "Shift all notes one tick earlier, wrapping around (Ctrl/Cmd + Left)"
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"IncrementButton"
+icon = ExtResource("6_shl")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[node name="NoteShiftRight" type="Button" parent="PatternSettings/PropertyBar/ButtonBar/NoteShiftBar"]
+unique_name_in_owner = true
+auto_translate_mode = 1
+custom_minimum_size = Vector2(36, 26)
+layout_mode = 2
+tooltip_text = "Shift all notes one tick later, wrapping around (Ctrl/Cmd + Right)"
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"IncrementButton"
+icon = ExtResource("7_shr")
 flat = true
 icon_alignment = 1
 expand_icon = true

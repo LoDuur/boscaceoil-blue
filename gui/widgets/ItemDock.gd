@@ -42,6 +42,9 @@ var _button_holder: ButtonHolder = null
 var _fake_scroll_up_button: Button = Button.new()
 var _fake_scroll_down_button: Button = Button.new()
 
+## Extra action buttons stacked above the add button.
+var _extra_buttons: Array[SquishyButton] = []
+
 @onready var _add_button: SquishyButton = %AddItem
 @onready var _delete_area: DeleteArea = %DeleteArea
 
@@ -293,14 +296,39 @@ func get_available_size() -> Vector2:
 	if not is_inside_tree():
 		return available_size
 	
-	if _add_button:
-		available_size.y -= (size.y - _add_button.position.y)
+	var top_button: SquishyButton = _extra_buttons.back() if not _extra_buttons.is_empty() else _add_button
+	if top_button:
+		available_size.y -= (size.y - top_button.position.y)
 	
 	return available_size
 
 
-func get_global_rect_with_delete_area() -> Rect2:
-	return get_global_rect().grow_side(SIDE_BOTTOM, _delete_area.get_global_rect().size.y)
+## Adds an action button stacked above the add button, and shrinks the item
+## area to make room for it.
+func add_extra_button(text: String) -> SquishyButton:
+	const SQUISHY_BUTTON_SCENE := preload("res://gui/widgets/SquishyButton.tscn")
+	const BUTTON_SPACING := 6.0
+	
+	var below: SquishyButton = _extra_buttons.back() if not _extra_buttons.is_empty() else _add_button
+	var button: SquishyButton = SQUISHY_BUTTON_SCENE.instantiate()
+	button.text = text
+	add_child(button)
+	
+	button.layout_mode = below.layout_mode
+	for side: Side in [ SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM ]:
+		button.set_anchor(side, below.get_anchor(side))
+		button.set_offset(side, below.get_offset(side))
+	button.grow_horizontal = below.grow_horizontal
+	button.grow_vertical = below.grow_vertical
+	
+	var shift := below.get_offset(SIDE_BOTTOM) - below.get_offset(SIDE_TOP) + BUTTON_SPACING
+	button.set_offset(SIDE_TOP, below.get_offset(SIDE_TOP) - shift)
+	button.set_offset(SIDE_BOTTOM, below.get_offset(SIDE_BOTTOM) - shift)
+	
+	_extra_buttons.push_back(button)
+	button.resized.connect(_update_max_item_amount)
+	_update_max_item_amount()
+	return button
 
 
 # Data.

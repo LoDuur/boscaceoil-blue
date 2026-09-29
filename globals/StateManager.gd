@@ -8,7 +8,7 @@ class_name StateManager extends RefCounted
 
 signal state_changed()
 
-const HISTORY_SIZE := 40
+const HISTORY_SIZE := 200
 const HISTORY_ACCUMULATION_DELAY := 0.5 # In seconds.
 
 enum StateChangeType {

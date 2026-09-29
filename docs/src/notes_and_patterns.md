@@ -42,7 +42,7 @@ A pitch is how high or how low the note sounds, and quite literally the lowest p
 
 ### Basics
 
-To place a note, <kbd>Left Click</kbd> on any empty cell of the grid. You cannot place a note into a cell that is already occupied. To remove the note, <kbd>Right Click</kbd> on it. Hold <kbd>Ctrl/Cmd</kbd> and use your <kbd>Mouse Wheel</kbd> to change the size of the placed note. Hold <kbd>Ctrl/Cmd</kbd> and <kbd>Left Click</kbd> on any existing note to copy its size; click on an empty space instead to reset the size back to 1.
+To place a note, <kbd>Left Click</kbd> on any empty cell of the grid (hold and drag to paint several). Clicking an existing note selects it instead; hold <kbd>Alt</kbd> to draw on top of another note's body. You cannot place a note into a cell where another note starts. To remove the note, <kbd>Right Click</kbd> on it. Hold <kbd>Ctrl/Cmd</kbd> and use your <kbd>Mouse Wheel</kbd> to change the size of the placed note. Hold <kbd>Ctrl/Cmd</kbd> and <kbd>Left Click</kbd> on any existing note to copy its size; click on an empty space instead to reset the size back to 1.
 
 ![](/images/patterns-drawing.png)
 
@@ -54,19 +54,23 @@ You can test the way the note sounds before committing to it. Click on the note 
 
 To help you further, notes that are placed when the playback is stopped or paused are played immediately.
 
-### Selecting and stamping
+### Selecting, moving and copying
 
-If you hold <kbd>Shift</kbd> and then <kbd>Left Click</kbd> and drag across the grid, you can select notes. Pressing <kbd>Ctrl/Cmd + C</kbd> when notes are selected copies them. Copied notes can be inserted into the same or a different pattern with <kbd>Ctrl/Cmd + V</kbd>. Inserted notes are placed relative to the cursor, to the top-right of it.
+Click a note to select it. <kbd>Shift + Left Click</kbd> adds or removes a note from the selection, and <kbd>Shift</kbd> + dragging from an empty cell selects every note in an area. <kbd>Ctrl/Cmd + A</kbd> selects all notes. Keyboard editing goes to the grid you clicked last, marked with a thin yellow border.
+
+Drag a selected note to move the whole selection; hold <kbd>Ctrl/Cmd</kbd> while you start dragging to copy instead. While dragging, the grid scrolls when you get close to its edge, and <kbd>Esc</kbd> or <kbd>Right Click</kbd> cancels. The arrow keys move the selection by one cell (<kbd>Shift</kbd> moves by a bar or an octave), and <kbd>Alt + Left/Right</kbd> shortens or lengthens the selected notes. A move that would push any note off the grid is refused as a whole. Notes that land on the start of another note replace it.
+
+<kbd>Ctrl/Cmd + C</kbd> copies the selection, <kbd>Ctrl/Cmd + X</kbd> cuts it, and <kbd>Delete</kbd> removes it. <kbd>Ctrl/Cmd + V</kbd> pastes into the same or a different pattern, and <kbd>Ctrl/Cmd + D</kbd> duplicates the selection without touching what's copied. Both show the notes under the cursor first: click (or press <kbd>Enter</kbd>) to place them, or cancel with <kbd>Esc</kbd> or <kbd>Right Click</kbd>. Notes that would replace existing ones are tinted red. A pattern holds at most 128 notes; anything beyond that is skipped, with a message.
 
 ![](/images/patterns-stamping.png)
 
-### Transposing
+### Transposing and shifting
 
-Using the plus and minus buttons below the grid the entire pattern of notes can be shifted higher or lower at the same time. As notes cannot overlap each other, shifting them close to the top and bottom limits may result in notes piling up, like Tetris pieces.
+The buttons below the grid shift every note of the pattern at once: up or down by one step of the scale (<kbd>Ctrl/Cmd + Up/Down</kbd>, or by an octave with <kbd>Ctrl/Cmd + Shift + Up/Down</kbd>), or earlier and later by one tick (<kbd>Ctrl/Cmd + Left/Right</kbd>). Shifting in time wraps around the pattern, so nothing is lost. Shifting up or down is refused if any note would leave the range.
 
 ### Action history
 
-You can always undo any recent change. The application remembers the last 40 actions that you performed, and allows you to step back and forth through these actions. Press <kbd>Ctrl/Cmd + Z</kbd> to undo an action, and <kbd>Shift + Ctrl/Cmd + Z</kbd> to redo the last undone action. This applies to everything you do in _Bosca Ceoil Blue_, not just placing notes.
+You can always undo any recent change. The application remembers the last 200 actions that you performed, and allows you to step back and forth through these actions. Press <kbd>Ctrl/Cmd + Z</kbd> to undo an action, and <kbd>Shift + Ctrl/Cmd + Z</kbd> or <kbd>Ctrl/Cmd + Y</kbd> to redo the last undone action. Holding an arrow key or dragging a slider counts as one action. This applies to everything you do in _Bosca Ceoil Blue_, not just placing notes.
 
 
 ## Key and scale

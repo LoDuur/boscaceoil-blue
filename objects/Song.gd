@@ -14,7 +14,7 @@ signal pattern_removed(pattern: Pattern)
 signal instrument_added(instrument: Instrument)
 signal instrument_removed(instrument: Instrument)
 
-const FILE_FORMAT := 3
+const FILE_FORMAT := 4
 const FILE_EXTENSION := "ceol"
 const FILE_DEFAULT_NAME := "new_song"
 
@@ -77,6 +77,9 @@ const MAX_BPM := 450 # This is obscenely large.
 
 # Runtime properties.
 
+## Set by the loader when the file contained legacy filter automation data,
+## which is no longer supported and was discarded.
+var dropped_legacy_filter_data: bool = false
 var _dirty: bool = false
 
 

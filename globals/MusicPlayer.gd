@@ -172,7 +172,7 @@ func update_driver_effects() -> void:
 
 # Driver interactions.
 
-func _play_note(pattern: Pattern, instrument: Instrument, note_data: Vector3i, current_time: int) -> void:
+func _play_note(instrument: Instrument, note_data: Vector3i, current_time: int) -> void:
 	if note_data.x < 0 || note_data.y < 0 || note_data.y != current_time || note_data.z < 1:
 		# X — note number is invalid.
 		# Y — note position in the pattern is invalid or doesn't match current time.
@@ -183,11 +183,6 @@ func _play_note(pattern: Pattern, instrument: Instrument, note_data: Vector3i, c
 
 	# Update the filter.
 	instrument.update_filter()
-
-	# If pattern uses recorded instrument values, set them directly.
-	if pattern.record_instrument && current_time >= 0 && current_time < pattern.recorded_instrument_values.size():
-		var values := pattern.recorded_instrument_values[current_time] # { volume, cutoff, resonance }
-		instrument.change_filter_to(values.y, values.z, values.x)
 
 	var note_value := instrument.get_note_value(note_data.x)
 	var note_voice := instrument.get_note_voice(note_data.x)
@@ -205,7 +200,28 @@ func play_note(pattern: Pattern, note_data: Vector3i) -> void:
 	_cutoff_note()
 	
 	var active_instrument := song.instruments[pattern.instrument_idx]
-	_play_note(pattern, active_instrument, note_data, note_data.y)
+	_play_note(active_instrument, note_data, note_data.y)
+
+
+func play_notes(pattern: Pattern, notes: Array[Vector3i]) -> void:
+	var song := Controller.current_song
+	if not song || song.instruments.is_empty() || song.patterns.is_empty():
+		return
+	
+	_cutoff_note()
+	
+	var active_instrument := song.instruments[pattern.instrument_idx]
+	for note_data in notes:
+		_play_note(active_instrument, note_data, note_data.y)
+
+
+## Plays a note on the given instrument, regardless of the edited pattern.
+func play_instrument_note(instrument: Instrument, note_value: int, length: int) -> void:
+	if not Controller.current_song:
+		return
+	
+	_cutoff_note()
+	_play_note(instrument, Vector3i(note_value, 0, length), 0)
 
 
 func _cutoff_note() -> void:
@@ -254,7 +270,7 @@ func _playback_step() -> void:
 			
 			var active_instrument := song.instruments[pattern.instrument_idx]
 			for note_idx in pattern.note_amount:
-				_play_note(pattern, active_instrument, pattern.notes[note_idx], _pattern_time)
+				_play_note(active_instrument, pattern.notes[note_idx], _pattern_time)
 	
 	# Finalize the step
 	_pattern_time += 1
@@ -416,48 +432,3 @@ func is_playing_residue() -> bool:
 
 func get_residue_time() -> int:
 	return _note_residue_time
-
-
-func render_samples(samples: Array[QueuedSample]) -> void:
-	if _music_exporting:
-		return
-	
-	# We are rendering the samples via the medium of MML. This is okay
-	# because we don't actually need to produce a sound matching the
-	# track in any way. Instead, we render a "neutral" sample which is
-	# then pitch corrected by the format player.
-	# This is pretty much only needed by XM and how XM works.
-	
-	# The rendering process is blocking, but pretty quick. So no extra
-	# logic is needed to handle the queue visually for the user. Maybe
-	# some really big compositions would noticeably hang, but we'll
-	# address that when we get there.
-	
-	_music_exporting = true
-	reset_driver() # Clears the output so there is no residue at the start.
-	
-	for sample in samples:
-		var note_octave := Note.get_note_octave(sample.note_value)
-		var note_literal := Note.get_note_mml(sample.note_value)
-	
-		var sample_mml := ""
-		sample_mml += sample.voice.get_mml(0) + "\n"
-		sample_mml += "%%6@0 o%d%s;" % [ note_octave, note_literal ]
-		
-		print_verbose("MusicPlayer: Rendering a sample for export:")
-		print_verbose(sample_mml)
-		
-		var buffer := _driver.render(sample_mml, 0, 1)
-		print_verbose("MusicPlayer: Rendered %d bytes" % [ buffer.size() ])
-		sample.callback.call(buffer)
-		
-		_driver.clear_data()
-	
-	_music_exporting = false
-	reset_driver() # Restarts the driver, because rendering stops it.
-
-
-class QueuedSample:
-	var voice: SiONVoice = null
-	var note_value: int = -1	
-	var callback: Callable = Callable()

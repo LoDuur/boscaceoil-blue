@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://1satggoreys0"]
+[gd_scene load_steps=9 format=3 uid="uid://1satggoreys0"]
 
 [ext_resource type="Script" path="res://gui/views/instrument_view/InstrumentSettings.gd" id="1_vna7b"]
 [ext_resource type="Theme" uid="uid://dkb62tku7dpgs" path="res://gui/theme/instruments/instrument_theme_gray.tres" id="1_x4dqd"]
@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://os3udjkncg7b" path="res://assets/icons/minus.png" id="4_q813e"]
 [ext_resource type="Texture2D" uid="uid://34gjffqqcubk" path="res://assets/icons/plus.png" id="5_o6gqk"]
 [ext_resource type="Texture2D" uid="uid://hfvrvhr83y46" path="res://assets/icons/random.png" id="6_vodiv"]
+[ext_resource type="Script" path="res://gui/views/instrument_view/CustomSoundPanel.gd" id="7_sound"]
 
 [node name="InstrumentSettings" type="PanelContainer"]
 auto_translate_mode = 1
@@ -124,6 +125,14 @@ auto_translate_mode = 1
 layout_mode = 2
 size_flags_vertical = 3
 
+[node name="SoundPanel" type="VBoxContainer" parent="Layout/TunerBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+script = ExtResource("7_sound")
+
 [node name="LowPass" type="VBoxContainer" parent="Layout/TunerBox"]
 auto_translate_mode = 1
 layout_mode = 2
@@ -140,16 +149,6 @@ vertical_range = Vector2i(0, 9)
 
 [node name="Labels" type="HBoxContainer" parent="Layout/TunerBox/LowPass"]
 layout_mode = 2
-
-[node name="RecordingLabel" type="Label" parent="Layout/TunerBox/LowPass/Labels"]
-unique_name_in_owner = true
-auto_translate_mode = 1
-layout_mode = 2
-size_flags_horizontal = 0
-theme_type_variation = &"InstrumentRecordingLabel"
-text = "! RECORDING: PATTERN # !"
-vertical_alignment = 1
-uppercase = true
 
 [node name="Label" type="Label" parent="Layout/TunerBox/LowPass/Labels"]
 auto_translate_mode = 1

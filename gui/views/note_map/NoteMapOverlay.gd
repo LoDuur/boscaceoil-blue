@@ -7,6 +7,9 @@
 @tool
 class_name NoteMapOverlay extends Control
 
+const GHOST_NOTE_OPACITY := 0.45
+const DIMMED_NOTE_OPACITY := 0.35
+
 var note_unit_width: float = 0
 
 var octave_rows: Array[NoteMap.OctaveRow] = []
@@ -15,6 +18,9 @@ var playback_cursor_position: float = -1
 var note_cursor_size: int = 1
 var note_cursor_position: Vector2 = Vector2i(-1, -1)
 var note_selecting_rect: Rect2 = Rect2(-1, -1, 0, 0)
+var ghost_notes: Array[NoteMap.GhostNote] = []
+## Whether the note editor receives keyboard editing actions.
+var focused: bool = false
 
 
 func _draw() -> void:
@@ -51,9 +57,8 @@ func _draw() -> void:
 	var note_overlap_texture := get_theme_icon("active_note_overlap", "NoteMap")
 	var note_overlap_opacity := get_theme_constant("active_note_overlap_opacity", "NoteMap")
 	
-	# Instrument-dependent note color.
-	var instrument_note_color := get_theme_color("note_color", "NoteMap")
-	var instrument_contrast_color := Color(1.0 - instrument_note_color.r, 1.0 - instrument_note_color.g, 1.0 - instrument_note_color.b)
+	var selection_outline_color := get_theme_color("selection_outline_color", "NoteMap")
+	var selection_outline_width := get_theme_constant("selection_outline_width", "NoteMap")
 	
 	var last_active_value := -1
 	var spanning_active_indices := PackedInt32Array()
@@ -62,8 +67,11 @@ func _draw() -> void:
 		var note_bevel_color := active_note_bevel_color
 		
 		if active_note.selected:
-			note_color = note_color.lerp(instrument_contrast_color, 0.5)
-			note_bevel_color = note_bevel_color.lerp(instrument_contrast_color, 0.8).darkened(0.2)
+			note_color = note_color.lerp(Color.WHITE, 0.7)
+			note_bevel_color = note_bevel_color.lightened(0.35)
+		if active_note.dimmed:
+			note_color.a *= DIMMED_NOTE_OPACITY
+			note_bevel_color.a *= DIMMED_NOTE_OPACITY
 		
 		# Make sure we don't track notes from other rows when considering overlaps.
 		if last_active_value != active_note.note_value:
@@ -119,6 +127,10 @@ func _draw() -> void:
 		draw_rect(Rect2(note_bevel_position, note_bevel_size), note_bevel_color)
 		draw_rect(Rect2(note_position, note_size), note_color)
 		
+		if active_note.selected:
+			var outline_rect := Rect2(note_bevel_position, note_bevel_size).grow(-selection_outline_width / 2.0)
+			draw_rect(outline_rect, selection_outline_color, false, selection_outline_width)
+		
 		# Check for overlaps with previous notes.
 		var overlaps_with_index := -1
 		for spanning_index in spanning_active_indices:
@@ -150,6 +162,18 @@ func _draw() -> void:
 			draw_string(label_font, shadow_position, cursor_label, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size, label_font_color)
 			draw_string(label_font, string_position, cursor_label, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size, label_shadow_color)
 	
+	# Draw the pending placement (paste, duplicate, or drag target).
+	
+	var ghost_color := Color(active_note_color, GHOST_NOTE_OPACITY)
+	var ghost_conflict_color := get_theme_color("ghost_conflict_color", "NoteMap")
+	for ghost_note in ghost_notes:
+		var ghost_position := ghost_note.position + Vector2(half_border_width, half_border_width)
+		var ghost_size := Vector2(note_unit_width * ghost_note.length, note_height) - Vector2(note_bevel_width, note_bevel_width)
+		var fill_color := ghost_conflict_color if ghost_note.conflict else ghost_color
+		
+		draw_rect(Rect2(ghost_position, ghost_size), fill_color)
+		draw_rect(Rect2(ghost_position, ghost_size), Color(selection_outline_color, GHOST_NOTE_OPACITY), false, selection_outline_width)
+	
 	# Draw the playback cursor.
 	
 	if playback_cursor_position >= 0:
@@ -166,6 +190,13 @@ func _draw() -> void:
 		
 		draw_rect(Rect2(cursor_position, cursor_size), cursor_color)
 		draw_rect(Rect2(cursor_bevel_position, cursor_bevel_size), cursor_bevel_color)
+	
+	# Mark the editor that receives keyboard editing actions.
+	
+	if focused:
+		var focus_width := get_theme_constant("focus_border_width", "NoteMap")
+		var focus_rect := Rect2(Vector2.ZERO, size).grow(-focus_width / 2.0)
+		draw_rect(focus_rect, get_theme_color("focus_border_color", "NoteMap"), false, focus_width)
 	
 	# Draw the note cursor.
 	# If we have a selection going on, we draw that instead.

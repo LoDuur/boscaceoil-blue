@@ -38,4 +38,4 @@ In other words, if two notes take _two ticks_ to play, then adjusting the swing 
 
 ## Exporting results
 
-Now that we've got every part of the creative process covered, it's time to render the song for the world to hear! Read on in [Export and Import](/export_import.html).
+Now that we've got every part of the creative process covered, it's time to render the song for the world to hear! Read on in [Exporting](/export_import.html).

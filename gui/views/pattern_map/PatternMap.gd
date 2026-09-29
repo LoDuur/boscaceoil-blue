@@ -11,6 +11,21 @@ const PATTERN_WIDTH_MIN := 0.5
 const PATTERN_WIDTH_MAX := 1.0
 const PATTERN_WIDTH_STEP := 0.05
 
+## Pointer distance, in pixels, before a press on a placement turns into a drag.
+const DRAG_THRESHOLD := 4.0
+## Distance from a grid edge, in pixels, that scrolls the grid while dragging.
+const AUTOSCROLL_MARGIN := 24.0
+const AUTOSCROLL_INTERVAL := 0.08
+## Cells moved by Shift+arrows.
+const BIG_STEP := 4
+
+enum Interaction {
+	NONE,
+	MARQUEE,
+	PRESSING,
+	DRAGGING,
+}
+
 ## Currently edited arrangement for the song.
 var current_arrangement: Arrangement = null
 ## Currently edited pattern.
@@ -29,6 +44,24 @@ var _scroll_offset: int = 0
 var _max_scroll_offset: int = -1
 ## Whether to follow the playback cursor with scroll or not.
 var _following_playback_cursor: bool = false
+
+var _interaction: Interaction = Interaction.NONE
+## Selected placements, keyed by Vector2i(bar, channel).
+var _selection: GridSelection = GridSelection.new()
+var _marquee_base: Array[Vector2i] = []
+var _marquee_start_cell: Vector2i = Vector2i(-1, -1)
+var _marquee_end_cell: Vector2i = Vector2i(-1, -1)
+
+var _press_position: Vector2 = Vector2.ZERO
+var _press_cell: Vector2i = Vector2i(-1, -1)
+var _press_was_selected: bool = false
+var _press_copies: bool = false
+var _press_makes_variant: bool = false
+
+## Pending placement from a paste, a duplicate, or a drag.
+var _ghost: GhostPlacement = null
+var _ghost_hover_cell: Vector2i = Vector2i(-1, -1)
+var _autoscroll_timer: float = 0.0
 
 var _arrangement_channels: Array[ArrangementChannel] = []
 var _arrangement_bars: Array[ArrangementBar] = []
@@ -76,12 +109,6 @@ func _ready() -> void:
 	mouse_exited.connect(_stop_hovering)
 	
 	if not Engine.is_editor_hint():
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.ARRANGEMENT_EDITOR_PATTERNMAP, get_global_available_rect)
-		
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.ARRANGEMENT_EDITOR_TIMELINE, _track.get_global_rect)
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.ARRANGEMENT_EDITOR_TIMELINE_SINGLE_BAR, _get_global_track_bar_rect)
-		Controller.help_manager.reference_node(HelpManager.StepNodeRef.ARRANGEMENT_EDITOR_TIMELINE_BAR_SPAN, _get_global_track_span_rect)
-		
 		_scrollbar.set_button_offset(_timeline.size.y, -_track.size.y)
 		
 		_track.loop_changed.connect(_change_arrangement_loop)
@@ -102,8 +129,17 @@ func _ready() -> void:
 		
 		Controller.music_player.playback_tick.connect(_update_playback_cursor)
 		Controller.music_player.playback_stopped.connect(_update_playback_cursor)
+		# Exporting always follows the playback; otherwise it's the user's choice.
 		Controller.music_player.export_started.connect(func() -> void: _following_playback_cursor = true)
-		Controller.music_player.export_ended.connect(func() -> void: _following_playback_cursor = false)
+		Controller.music_player.export_ended.connect(func() -> void: _following_playback_cursor = Controller.follow_playback)
+		Controller.follow_playback_changed.connect(func() -> void: _following_playback_cursor = Controller.follow_playback)
+		
+		Controller.editor_focus_changed.connect(_update_focus_state)
+		Controller.history_navigated.connect(_selection.clear)
+		Controller.ghost_cancel_requested.connect(_cancel_ghost)
+		visibility_changed.connect(_release_focus_when_hidden)
+		
+		_selection.changed.connect(_on_selection_changed)
 
 
 func _update_theme() -> void:
@@ -146,38 +182,208 @@ func _gui_input(event: InputEvent) -> void:
 			elif mb.button_index == MOUSE_BUTTON_WHEEL_RIGHT:
 				_change_scroll_offset(1)
 			
-			elif mb.button_index == MOUSE_BUTTON_LEFT:
-				if mb.alt_pressed:
-					pass # Handled on release.
-				else:
-					_select_pattern_at_cursor()
-			elif mb.button_index == MOUSE_BUTTON_RIGHT:
-				_clear_pattern_at_cursor()
+			elif mb.button_index == MOUSE_BUTTON_LEFT || mb.button_index == MOUSE_BUTTON_RIGHT:
+				Controller.set_editor_focus(Controller.EditorFocus.ARRANGEMENT)
+				_handle_press(mb)
 		
 		# On mouse button release.
 		else:
-			if mb.button_index == MOUSE_BUTTON_LEFT && mb.alt_pressed:
+			_handle_release(mb)
+	
+	elif event is InputEventMouseMotion:
+		if _interaction == Interaction.PRESSING && get_local_mouse_position().distance_to(_press_position) > DRAG_THRESHOLD:
+			_start_dragging()
+
+
+func _handle_press(mb: InputEventMouseButton) -> void:
+	if not current_arrangement || not Controller.current_song:
+		return
+	
+	# A pending placement takes over the mouse: left click places, right click cancels.
+	if _ghost && not _ghost.is_drag():
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			_follow_ghost_to_cursor()
+			_commit_ghost()
+		else:
+			_cancel_ghost()
+		return
+	
+	if _interaction == Interaction.DRAGGING:
+		if mb.button_index == MOUSE_BUTTON_RIGHT:
+			_cancel_ghost()
+		return
+	
+	if mb.button_index == MOUSE_BUTTON_RIGHT:
+		_clear_pattern_at_cursor()
+		return
+	
+	var cell := _get_grid_cell_at_cursor()
+	if cell.x < 0:
+		return
+	var occupied := current_arrangement.has_pattern(cell.x, cell.y)
+	
+	if not occupied:
+		if mb.shift_pressed:
+			_start_marquee(cell)
+		else:
+			_selection.clear()
+		return
+	
+	# Clicking a placement also opens its pattern in the pattern editor.
+	_select_pattern_at_cursor()
+	
+	if mb.shift_pressed:
+		_selection.toggle(cell)
+		return
+	
+	_press_was_selected = _selection.has(cell)
+	if not _press_was_selected:
+		_selection.set_keys([ cell ])
+	
+	_interaction = Interaction.PRESSING
+	_press_position = get_local_mouse_position()
+	_press_cell = cell
+	_press_copies = mb.is_command_or_control_pressed()
+	_press_makes_variant = mb.alt_pressed
+	_update_processing_state()
+
+
+func _handle_release(mb: InputEventMouseButton) -> void:
+	if mb.button_index != MOUSE_BUTTON_LEFT:
+		return
+	
+	match _interaction:
+		Interaction.MARQUEE:
+			_stop_marquee()
+		
+		Interaction.PRESSING:
+			_interaction = Interaction.NONE
+			_update_processing_state()
+			
+			if _press_makes_variant:
+				# Alt+click replaces the placement with a new variant of its pattern.
 				_clone_pattern_at_cursor()
+			elif _press_was_selected && not _press_copies && _selection.size() > 1:
+				# A click on a placement of a bigger selection narrows it to that placement.
+				_selection.set_keys([ _press_cell ])
+		
+		Interaction.DRAGGING:
+			_follow_ghost_to_cursor()
+			_commit_ghost()
 
 
 func _shortcut_input(event: InputEvent) -> void:
-	if not _hovering || Controller.is_song_editing_locked():
+	if Engine.is_editor_hint() || Controller.is_song_editing_locked():
+		return
+	if not is_visible_in_tree():
 		return
 	
-	if event.is_action_pressed("bosca_patternmap_scale_bigger", true, true):
-		_resize_pattern_width(1)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("bosca_patternmap_scale_smaller", true, true):
-		_resize_pattern_width(-1)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("bosca_patternmap_duplicate", false, true):
-		_clone_pattern_at_cursor()
+	if _hovering:
+		if event.is_action_pressed("bosca_patternmap_scale_bigger", true, true):
+			_resize_pattern_width(1)
+			get_viewport().set_input_as_handled()
+			return
+		elif event.is_action_pressed("bosca_patternmap_scale_smaller", true, true):
+			_resize_pattern_width(-1)
+			get_viewport().set_input_as_handled()
+			return
+		elif event.is_action_pressed("bosca_patternmap_make_variant", false, true):
+			_clone_pattern_at_cursor()
+			get_viewport().set_input_as_handled()
+			return
+	
+	if Controller.editor_focus != Controller.EditorFocus.ARRANGEMENT:
+		return
+	
+	if _handle_editing_shortcut(event):
 		get_viewport().set_input_as_handled()
 
 
-func _physics_process(_delta: float) -> void:
+## Keyboard editing for the focused arrangement. Returns true when handled.
+func _handle_editing_shortcut(event: InputEvent) -> bool:
+	if not current_arrangement || not Controller.current_song:
+		return false
+	
+	if event.is_action_pressed("bosca_cancel", false, true):
+		if _ghost:
+			_cancel_ghost()
+			return true
+		if not _selection.is_empty():
+			_selection.clear()
+			return true
+		return false
+	
+	if event.is_action_pressed("bosca_confirm", false, true):
+		if _ghost && not _ghost.is_drag():
+			_commit_ghost()
+			return true
+		return false
+	
+	# Arrows nudge a pending placement, or move the selection.
+	var move_delta := _get_move_delta(event)
+	if move_delta != Vector2i.ZERO:
+		if _ghost:
+			if not _ghost.is_drag() && _ghost.nudge(move_delta):
+				_update_ghost_items()
+			return true
+		if _selection.is_empty():
+			return false # Fall back to scrolling.
+		
+		_move_selected_placements(move_delta)
+		return true
+	
+	if _interaction == Interaction.DRAGGING:
+		return false
+	
+	if event.is_action_pressed("bosca_select_all", false, true):
+		_select_all_placements()
+	elif event.is_action_pressed("bosca_copy", false, true):
+		_copy_selected_placements()
+	elif event.is_action_pressed("bosca_cut", false, true):
+		_cut_selected_placements()
+	elif event.is_action_pressed("bosca_paste", false, true):
+		_paste_placements()
+	elif event.is_action_pressed("bosca_duplicate", false, true):
+		_duplicate_placements()
+	elif event.is_action_pressed("bosca_delete", false, true):
+		_delete_selected_placements()
+	else:
+		return false
+	
+	return true
+
+
+func _get_move_delta(event: InputEvent) -> Vector2i:
+	if event.is_action_pressed("bosca_edit_move_up", true, true):
+		return Vector2i(0, -1)
+	if event.is_action_pressed("bosca_edit_move_down", true, true):
+		return Vector2i(0, 1)
+	if event.is_action_pressed("bosca_edit_move_left", true, true):
+		return Vector2i(-1, 0)
+	if event.is_action_pressed("bosca_edit_move_right", true, true):
+		return Vector2i(1, 0)
+	if event.is_action_pressed("bosca_edit_move_up_big", true, true):
+		return Vector2i(0, -BIG_STEP)
+	if event.is_action_pressed("bosca_edit_move_down_big", true, true):
+		return Vector2i(0, BIG_STEP)
+	if event.is_action_pressed("bosca_edit_move_left_big", true, true):
+		return Vector2i(-BIG_STEP, 0)
+	if event.is_action_pressed("bosca_edit_move_right_big", true, true):
+		return Vector2i(BIG_STEP, 0)
+	
+	return Vector2i.ZERO
+
+
+func _physics_process(delta: float) -> void:
 	_process_pattern_cursor()
 	_process_scrollbar_hover()
+	_process_marquee()
+	_process_ghost()
+	_process_autoscroll(delta)
+
+
+func _update_processing_state() -> void:
+	set_physics_process(_hovering || _interaction != Interaction.NONE || _ghost != null)
 
 
 func _draw() -> void:
@@ -228,32 +434,6 @@ func get_available_rect() -> Rect2:
 		available_rect.position.y += _timeline.size.y
 
 	return available_rect
-
-
-func get_global_available_rect() -> Rect2:
-	var available_rect := get_available_rect()
-	available_rect.position += global_position
-	return available_rect
-
-
-func _get_global_track_bar_rect() -> Rect2:
-	var track_rect := _track.get_global_rect()
-	
-	var arbitrary_bar := _arrangement_bars[2]
-	track_rect.position.x += arbitrary_bar.grid_position.x
-	track_rect.size.x = _pattern_width
-	
-	return track_rect
-
-
-func _get_global_track_span_rect() -> Rect2:
-	var track_rect := _track.get_global_rect()
-	
-	var arbitrary_bar := _arrangement_bars[2]
-	track_rect.position.x += arbitrary_bar.grid_position.x
-	track_rect.size.x = _pattern_width * 3
-	
-	return track_rect
 
 
 # Scrolling.
@@ -554,6 +734,12 @@ func _update_active_patterns() -> void:
 	
 	_items.active_patterns = _active_patterns
 	_items.queue_redraw()
+	
+	# Placements cleared by another edit leave the selection.
+	_selection.retain(_is_placement_key_valid)
+	_update_selection_visuals()
+	if _ghost:
+		_update_ghost_items()
 
 
 func _update_active_loop() -> void:
@@ -574,12 +760,12 @@ func _start_hovering() -> void:
 	_hovering = true
 	_process_pattern_cursor()
 	_process_scrollbar_hover()
-	set_physics_process(true)
+	_update_processing_state()
 
 
 func _stop_hovering() -> void:
 	_hovering = false
-	set_physics_process(false)
+	_update_processing_state()
 	_process_pattern_cursor()
 	_process_scrollbar_hover()
 
@@ -591,7 +777,8 @@ func _process_scrollbar_hover() -> void:
 # Pattern cursor and drawing.
 
 func _process_pattern_cursor() -> void:
-	if not _hovering:
+	# The ghost replaces the cursor while it's active.
+	if not _hovering || _ghost:
 		_overlay.pattern_cursor_position = Vector2(-1, -1)
 		_overlay.queue_redraw()
 		return
@@ -605,48 +792,17 @@ func _process_pattern_cursor() -> void:
 	_overlay.queue_redraw()
 
 
-func _get_drag_data(at_position: Vector2) -> Variant:
-	var pattern_idx := _get_pattern_at_position(at_position)
-	if pattern_idx < 0:
-		return null
-	
-	var drag_data := DraggedPattern.new()
-	drag_data.pattern_index = pattern_idx
-	
-	var pattern := _active_patterns[pattern_idx]
-	
-	var preview := DraggedPatternPreview.new()
-	preview.reflect_transient_state = true
-	preview.cloned = Input.is_key_pressed(KEY_ALT)
-	preview.size = pattern.item_size
-	preview.draw.connect(_items.draw_item.bind(preview, pattern, Vector2.ZERO, true))
-	set_drag_preview(preview)
-	
-	return drag_data
-
+# Dragging from the pattern dock uses Godot's drag-and-drop; drags inside the
+# grid are handled by the interaction state machine above.
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	if data is ItemDock.ItemDragData && (data as ItemDock.ItemDragData).source_id == Controller.DragSources.PATTERN_DOCK:
-		return true
-	
-	if data is DraggedPattern:
-		return true
-	
-	return false
+	return data is ItemDock.ItemDragData && (data as ItemDock.ItemDragData).source_id == Controller.DragSources.PATTERN_DOCK
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
-	if data is ItemDock.ItemDragData && (data as ItemDock.ItemDragData).source_id == Controller.DragSources.PATTERN_DOCK:
+	if _can_drop_data(_at_position, data):
 		var item_data := data as ItemDock.ItemDragData
 		_set_pattern_at_cursor(item_data.item_index)
-	
-	if data is DraggedPattern:
-		var pattern_data := data as DraggedPattern
-		
-		if Input.is_key_pressed(KEY_ALT):
-			_clone_pattern_at_cursor(pattern_data.pattern_index)
-		else:
-			_set_pattern_at_cursor(pattern_data.pattern_index)
 
 
 # Editing.
@@ -670,6 +826,7 @@ func _edit_current_arrangement() -> void:
 	
 	current_arrangement = Controller.current_song.arrangement
 	current_pattern = Controller.get_current_pattern()
+	_selection.clear()
 
 	if current_arrangement:
 		current_arrangement.patterns_changed.connect(_update_active_patterns)
@@ -794,19 +951,22 @@ func _clear_pattern_at_cursor() -> void:
 	Controller.state_manager.commit_state_change(arrangement_state)
 
 
-func _clone_pattern_at_cursor(pattern_idx: int = -1) -> void:
-	if not current_arrangement || not Controller.current_song:
+func _clone_pattern_at_cursor() -> void:
+	var cell := _get_grid_cell_at_cursor()
+	if cell.x < 0:
 		return
 	
-	if pattern_idx < 0:
-		pattern_idx = _get_pattern_at_cursor()
-	
+	_clone_pattern_at_cell(_get_pattern_at_cursor(), cell)
+
+
+## Places a new variant (a copy) of the pattern at the cell.
+func _clone_pattern_at_cell(pattern_idx: int, cell: Vector2i) -> void:
+	if not current_arrangement || not Controller.current_song:
+		return
 	if pattern_idx < 0 || not Controller.can_clone_pattern(pattern_idx):
 		return
 	
-	var cell := _get_cell_at_cursor()
-	var bar_index := cell.x + _scroll_offset
-	
+	var bar_index := cell.x
 	var old_value := current_arrangement.get_pattern(bar_index, cell.y)
 	
 	var arrangement_state := Controller.state_manager.create_state_change(StateManager.StateChangeType.ARRANGEMENT)
@@ -827,6 +987,477 @@ func _clone_pattern_at_cursor(pattern_idx: int = -1) -> void:
 	)
 	
 	Controller.state_manager.commit_state_change(arrangement_state)
+
+
+# Grid cells and placements.
+# Editing works on cells as Vector2i(bar, channel), independent of the scroll
+# offset.
+
+func _get_edit_bounds() -> Rect2i:
+	return Rect2i(0, 0, Arrangement.BAR_NUMBER, Arrangement.CHANNEL_NUMBER)
+
+
+func _get_grid_cell_at_cursor() -> Vector2i:
+	var cell := _get_cell_at_cursor()
+	if cell.x < 0 || cell.y < 0:
+		return Vector2i(-1, -1)
+	
+	var bar_index := cell.x + _scroll_offset
+	if bar_index >= Arrangement.BAR_NUMBER:
+		return Vector2i(-1, -1)
+	return Vector2i(bar_index, cell.y)
+
+
+## Like _get_grid_cell_at_cursor(), but snaps a pointer outside the grid to its
+## nearest edge, for drags and marquees.
+func _get_grid_cell_at_cursor_clamped() -> Vector2i:
+	var inner_rect := get_available_rect().grow(-1.0)
+	var mouse_position := get_local_mouse_position().clamp(inner_rect.position, inner_rect.end)
+	
+	var cell := _get_cell_at_position(mouse_position)
+	if cell.x < 0 || cell.y < 0:
+		return Vector2i(-1, -1)
+	return Vector2i(mini(cell.x + _scroll_offset, Arrangement.BAR_NUMBER - 1), cell.y)
+
+
+func _is_placement_key_valid(key: Vector2i) -> bool:
+	return current_arrangement != null && current_arrangement.has_pattern(key.x, key.y)
+
+
+## Placements as Vector3i(bar, channel, pattern index).
+func _get_all_placements() -> Array[Vector3i]:
+	var placements: Array[Vector3i] = []
+	if not current_arrangement:
+		return placements
+	
+	for bar_index in current_arrangement.timeline_length:
+		for channel in Arrangement.CHANNEL_NUMBER:
+			var pattern_index := current_arrangement.get_pattern(bar_index, channel)
+			if pattern_index >= 0:
+				placements.push_back(Vector3i(bar_index, channel, pattern_index))
+	return placements
+
+
+func _get_selected_placements() -> Array[Vector3i]:
+	var placements: Array[Vector3i] = []
+	if not current_arrangement:
+		return placements
+	
+	for key in _selection.get_keys():
+		var pattern_index := current_arrangement.get_pattern(key.x, key.y)
+		if pattern_index >= 0:
+			placements.push_back(Vector3i(key.x, key.y, pattern_index))
+	
+	placements.sort()
+	return placements
+
+
+static func _get_placement_keys(placements: Array[Vector3i]) -> Array[Vector2i]:
+	var keys: Array[Vector2i] = []
+	for placement in placements:
+		keys.push_back(Vector2i(placement.x, placement.y))
+	return keys
+
+
+static func _pluralize_patterns(amount: int) -> String:
+	return "PATTERN" if amount == 1 else "PATTERNS"
+
+
+## Changes placements as one undoable change, as Vector2i(bar, channel) ->
+## pattern index (-1 clears). With an accumulation id, repeated calls within a
+## short window merge into a single undo step.
+func _commit_cell_changes(changes: Dictionary, accum_id: String = "") -> void:
+	if changes.is_empty():
+		return
+	
+	var arrangement_state := Controller.state_manager.create_state_change(StateManager.StateChangeType.ARRANGEMENT, -1, accum_id)
+	var state_context := arrangement_state.get_context()
+	if not state_context.has("before"):
+		state_context["before"] = {}
+		state_context["after"] = {}
+	
+	for cell: Vector2i in changes:
+		if not state_context.before.has(cell):
+			state_context.before[cell] = current_arrangement.get_pattern(cell.x, cell.y)
+		state_context.after[cell] = changes[cell]
+	
+	arrangement_state.add_do_action(func() -> void:
+		Controller.current_song.arrangement.apply_cell_changes(state_context.after)
+	)
+	arrangement_state.add_undo_action(func() -> void:
+		Controller.current_song.arrangement.apply_cell_changes(state_context.before)
+	)
+	
+	Controller.state_manager.commit_state_change(arrangement_state)
+
+
+## Places items at cells, overwriting occupied ones, after clearing the given
+## source cells. Returns the placed items.
+func _place_items(placed: Array[Vector3i], cleared_cells: Array[Vector2i], accum_id: String = "") -> Array[Vector3i]:
+	var changes := {}
+	for cell in cleared_cells:
+		changes[cell] = -1
+	for item in placed:
+		changes[Vector2i(item.x, item.y)] = item.z
+	
+	# Skip no-op changes, e.g. a drag released where it started.
+	var effective_changes := {}
+	for cell: Vector2i in changes:
+		if current_arrangement.get_pattern(cell.x, cell.y) != changes[cell]:
+			effective_changes[cell] = changes[cell]
+	
+	_commit_cell_changes(effective_changes, accum_id)
+	return placed
+
+
+# Selection.
+
+func _on_selection_changed() -> void:
+	_update_selection_visuals()
+	_update_arrow_capture()
+	
+	if _interaction != Interaction.MARQUEE:
+		_report_selection_size()
+
+
+func _report_selection_size() -> void:
+	if _selection.size() > 1:
+		Controller.update_status("%d PATTERNS SELECTED" % [ _selection.size() ], Controller.StatusLevel.INFO)
+
+
+func _update_arrow_capture() -> void:
+	if Engine.is_editor_hint():
+		return
+	Controller.set_editor_arrow_capture(Controller.EditorFocus.ARRANGEMENT, not _selection.is_empty() || _ghost != null)
+
+
+func _update_focus_state() -> void:
+	_overlay.focused = Controller.editor_focus == Controller.EditorFocus.ARRANGEMENT
+	_overlay.queue_redraw()
+
+
+func _release_focus_when_hidden() -> void:
+	if not is_visible_in_tree() && Controller.editor_focus == Controller.EditorFocus.ARRANGEMENT:
+		Controller.set_editor_focus(Controller.EditorFocus.NONE)
+
+
+func _update_selection_visuals() -> void:
+	var selected_positions := PackedVector2Array()
+	var dimmed_positions := PackedVector2Array()
+	var available_rect := get_available_rect()
+	
+	var dimmed_keys: Array[Vector2i] = []
+	if _ghost && _ghost.source == GhostPlacement.Source.DRAG_MOVE:
+		dimmed_keys = _ghost.source_cells
+	
+	for key in _selection.get_keys():
+		var cell_position := _get_cell_position(Vector2i(key.x - _scroll_offset, key.y))
+		if cell_position.x >= available_rect.position.x && cell_position.x < available_rect.end.x:
+			selected_positions.push_back(cell_position)
+	for key in dimmed_keys:
+		var cell_position := _get_cell_position(Vector2i(key.x - _scroll_offset, key.y))
+		if cell_position.x >= available_rect.position.x && cell_position.x < available_rect.end.x:
+			dimmed_positions.push_back(cell_position)
+	
+	_overlay.selected_positions = selected_positions
+	_overlay.dimmed_positions = dimmed_positions
+	_overlay.queue_redraw()
+
+
+func _select_all_placements() -> void:
+	_selection.set_keys(_get_placement_keys(_get_all_placements()))
+
+
+# Marquee.
+
+func _start_marquee(cell: Vector2i) -> void:
+	_interaction = Interaction.MARQUEE
+	_marquee_base = _selection.get_keys()
+	_marquee_start_cell = cell
+	_marquee_end_cell = cell
+	_update_processing_state()
+	_process_marquee()
+
+
+func _stop_marquee() -> void:
+	if _interaction == Interaction.MARQUEE:
+		_interaction = Interaction.NONE
+		_update_processing_state()
+		_report_selection_size()
+	
+	_marquee_start_cell = Vector2i(-1, -1)
+	_overlay.marquee_rect = Rect2(-1, -1, 0, 0)
+	_overlay.queue_redraw()
+
+
+func _process_marquee() -> void:
+	if _interaction != Interaction.MARQUEE:
+		return
+	
+	var cell := _get_grid_cell_at_cursor_clamped()
+	if cell.x >= 0:
+		_marquee_end_cell = cell
+	
+	var cell_rect := Rect2i(_marquee_start_cell, Vector2i.ZERO).expand(_marquee_end_cell)
+	cell_rect.size += Vector2i(1, 1) # Far edges are inclusive.
+	
+	var next_keys := _marquee_base.duplicate()
+	for placement in _get_all_placements():
+		if cell_rect.has_point(Vector2i(placement.x, placement.y)):
+			next_keys.push_back(Vector2i(placement.x, placement.y))
+	_selection.set_keys(next_keys)
+	
+	var top_left := _get_cell_position(Vector2i(cell_rect.position.x - _scroll_offset, cell_rect.position.y))
+	var pixel_size := Vector2(cell_rect.size.x * _pattern_width, cell_rect.size.y * _pattern_height)
+	_overlay.marquee_rect = Rect2(top_left, pixel_size).intersection(get_available_rect())
+	_overlay.queue_redraw()
+
+
+# Ghost placement and dragging.
+
+func _start_ghost(items: Array[Vector3i], source: GhostPlacement.Source, anchor: Vector2i) -> void:
+	_ghost = GhostPlacement.new(GridClipboard.to_relative(items), source, _get_edit_bounds())
+	_ghost.anchor_cell = _ghost.clamp_anchor(anchor)
+	_ghost_hover_cell = Vector2i(-1, -1)
+	
+	_update_arrow_capture()
+	_update_processing_state()
+	_update_ghost_items()
+
+
+func _cancel_ghost() -> void:
+	if not _ghost:
+		return
+	
+	_ghost = null
+	_press_makes_variant = false
+	if _interaction == Interaction.DRAGGING:
+		_interaction = Interaction.NONE
+	
+	_update_arrow_capture()
+	_update_processing_state()
+	_update_ghost_items()
+
+
+func _follow_ghost_to_cursor() -> void:
+	if not _ghost:
+		return
+	
+	var cell := _get_grid_cell_at_cursor_clamped() if _ghost.is_drag() else _get_grid_cell_at_cursor()
+	if cell.x < 0 || cell == _ghost_hover_cell:
+		return
+	
+	_ghost_hover_cell = cell
+	if _ghost.follow_cell(cell):
+		_update_ghost_items()
+
+
+func _process_ghost() -> void:
+	if _ghost:
+		_follow_ghost_to_cursor()
+
+
+func _update_ghost_items() -> void:
+	var ghost_items: Array[GhostItem] = []
+	
+	if _ghost && current_arrangement && Controller.current_song:
+		var ignored_cells := _ghost.source_cells if _ghost.source == GhostPlacement.Source.DRAG_MOVE else ([] as Array[Vector2i])
+		var is_occupied := func(cell: Vector2i) -> bool:
+			return current_arrangement.has_pattern(cell.x, cell.y) && not ignored_cells.has(cell)
+		var fit_mask := _ghost.is_valid_at(_ghost.anchor_cell, is_occupied)
+		var available_rect := get_available_rect()
+		
+		for i in _ghost.items.size():
+			var item := _ghost.items[i]
+			if fit_mask[i] == GhostPlacement.FIT_NONE || item.z < 0 || item.z >= _active_patterns.size():
+				continue
+			
+			var cell := _ghost.get_item_cell(item, _ghost.anchor_cell)
+			var cell_position := _get_cell_position(Vector2i(cell.x - _scroll_offset, cell.y))
+			if cell_position.x < available_rect.position.x || cell_position.x >= available_rect.end.x:
+				continue
+			
+			var ghost_item := GhostItem.new()
+			ghost_item.position = cell_position
+			ghost_item.color = _active_patterns[item.z].main_color
+			ghost_item.label = "%d%s" % [ item.z + 1, "*" if _press_makes_variant else "" ]
+			ghost_item.conflict = fit_mask[i] == GhostPlacement.FIT_CONFLICT
+			ghost_items.push_back(ghost_item)
+	
+	_overlay.ghost_items = ghost_items
+	_process_pattern_cursor()
+	_update_selection_visuals()
+
+
+func _start_dragging() -> void:
+	var items: Array[Vector3i] = []
+	var source := GhostPlacement.Source.DRAG_COPY if _press_copies else GhostPlacement.Source.DRAG_MOVE
+	
+	if _press_makes_variant:
+		# Alt+drag makes a variant of the grabbed pattern only.
+		var pattern_index := current_arrangement.get_pattern(_press_cell.x, _press_cell.y)
+		if pattern_index >= 0:
+			items.push_back(Vector3i(_press_cell.x, _press_cell.y, pattern_index))
+		source = GhostPlacement.Source.DRAG_COPY
+	else:
+		items = _get_selected_placements()
+	
+	if items.is_empty():
+		_interaction = Interaction.NONE
+		_update_processing_state()
+		return
+	
+	_interaction = Interaction.DRAGGING
+	
+	var group_anchor := Vector2i(items[0].x, items[0].y)
+	for item in items:
+		group_anchor = Vector2i(mini(group_anchor.x, item.x), mini(group_anchor.y, item.y))
+	
+	_start_ghost(items, source, group_anchor)
+	_ghost.grab_offset = _press_cell - group_anchor
+	_ghost.source_cells.assign(_get_placement_keys(items))
+	_update_ghost_items()
+
+
+func _commit_ghost() -> void:
+	if not _ghost || not current_arrangement || not Controller.current_song:
+		return
+	
+	var ghost := _ghost
+	var makes_variant := _press_makes_variant
+	_cancel_ghost()
+	
+	if makes_variant:
+		var target_cell := ghost.get_item_cell(ghost.items[0], ghost.anchor_cell)
+		_clone_pattern_at_cell(ghost.items[0].z, target_cell)
+		return
+	
+	var bounds := _get_edit_bounds()
+	var placed: Array[Vector3i] = []
+	var dropped := 0
+	var pattern_count := Controller.current_song.patterns.size()
+	for item in ghost.items:
+		var cell := ghost.get_item_cell(item, ghost.anchor_cell)
+		# Patterns may have been deleted since they were copied.
+		if not bounds.has_point(cell) || item.z >= pattern_count:
+			dropped += 1
+			continue
+		placed.push_back(Vector3i(cell.x, cell.y, item.z))
+	
+	var cleared_cells: Array[Vector2i] = []
+	if ghost.source == GhostPlacement.Source.DRAG_MOVE:
+		cleared_cells = ghost.source_cells
+	
+	_place_items(placed, cleared_cells)
+	_selection.set_keys(_get_placement_keys(placed))
+	
+	if dropped > 0:
+		Controller.update_status("%d %s DIDN'T FIT" % [ dropped, _pluralize_patterns(dropped) ], Controller.StatusLevel.WARNING)
+
+
+func _process_autoscroll(delta: float) -> void:
+	if _interaction != Interaction.DRAGGING && _interaction != Interaction.MARQUEE:
+		_autoscroll_timer = 0.0
+		return
+	
+	_autoscroll_timer -= delta
+	if _autoscroll_timer > 0.0:
+		return
+	
+	var available_rect := get_available_rect()
+	var mouse_x := get_local_mouse_position().x
+	if mouse_x < available_rect.position.x + AUTOSCROLL_MARGIN:
+		_change_scroll_offset(-1)
+		_autoscroll_timer = AUTOSCROLL_INTERVAL
+	elif mouse_x > available_rect.end.x - AUTOSCROLL_MARGIN:
+		_change_scroll_offset(1)
+		_autoscroll_timer = AUTOSCROLL_INTERVAL
+
+
+# Clipboard and keyboard editing.
+
+func _copy_selected_placements() -> void:
+	var placements := _get_selected_placements()
+	if placements.is_empty():
+		return
+	
+	Controller.arrangement_clipboard.store(placements)
+	Controller.update_status("%d %s COPIED" % [ placements.size(), _pluralize_patterns(placements.size()) ], Controller.StatusLevel.INFO)
+
+
+func _cut_selected_placements() -> void:
+	if _selection.is_empty():
+		return
+	
+	_copy_selected_placements()
+	_delete_selected_placements()
+
+
+func _paste_placements() -> void:
+	if Controller.arrangement_clipboard.is_empty():
+		return
+	
+	var anchor := _get_grid_cell_at_cursor()
+	if anchor.x < 0:
+		anchor = Vector2i(_scroll_offset, 0) # Top-left of the visible grid.
+	_start_ghost(Controller.arrangement_clipboard.get_items(), GhostPlacement.Source.PASTE, anchor)
+
+
+func _duplicate_placements() -> void:
+	var items := _get_selected_placements()
+	var anchor := _get_grid_cell_at_cursor()
+	
+	# Without a selection, duplicate the placement under the cursor.
+	if items.is_empty():
+		if anchor.x < 0 || not current_arrangement.has_pattern(anchor.x, anchor.y):
+			return
+		items.push_back(Vector3i(anchor.x, anchor.y, current_arrangement.get_pattern(anchor.x, anchor.y)))
+	
+	if anchor.x < 0:
+		anchor = Vector2i(items[0].x, items[0].y)
+	_start_ghost(items, GhostPlacement.Source.DUPLICATE, anchor)
+
+
+func _delete_selected_placements() -> void:
+	var placements := _get_selected_placements()
+	if placements.is_empty():
+		return
+	
+	var changes := {}
+	for placement in placements:
+		changes[Vector2i(placement.x, placement.y)] = -1
+	_commit_cell_changes(changes)
+	_selection.clear()
+
+
+func _move_selected_placements(delta: Vector2i) -> void:
+	var placements := _get_selected_placements()
+	if placements.is_empty():
+		return
+	
+	# The whole selection moves, or nothing does.
+	var bounds := _get_edit_bounds()
+	var moved: Array[Vector3i] = []
+	for placement in placements:
+		var cell := Vector2i(placement.x, placement.y) + delta
+		if not bounds.has_point(cell):
+			Controller.update_status("CAN'T MOVE — SELECTION AT THE EDGE", Controller.StatusLevel.WARNING)
+			return
+		moved.push_back(Vector3i(cell.x, cell.y, placement.z))
+	
+	# Key repeat accumulates into one undo step.
+	_place_items(moved, _get_placement_keys(placements), "arrangement_nudge")
+	_selection.set_keys(_get_placement_keys(moved))
+	_scroll_to_bar(moved[0].x if delta.x < 0 else moved[moved.size() - 1].x)
+
+
+## Scrolls just enough to bring the bar into view.
+func _scroll_to_bar(bar_index: int) -> void:
+	var bars_on_screen := maxi(1, floori(get_available_rect().size.x / _pattern_width))
+	if bar_index < _scroll_offset:
+		_change_scroll_offset(bar_index - _scroll_offset)
+	elif bar_index >= _scroll_offset + bars_on_screen:
+		_change_scroll_offset(bar_index - _scroll_offset - bars_on_screen + 1)
 
 
 func _change_arrangement_loop(starts_at: int, ends_at: int) -> void:
@@ -963,6 +1594,14 @@ class ArrangementBar:
 	var grid_position: Vector2 = Vector2.ZERO
 
 
+class GhostItem:
+	var position: Vector2 = Vector2.ZERO
+	var color: Color = Color.WHITE
+	var label: String = ""
+	## Would overwrite an existing placement.
+	var conflict: bool = false
+
+
 class ActivePattern:
 	var pattern_index: int = -1
 	var main_color: Color = Color.BLACK
@@ -976,23 +1615,3 @@ class ActivePattern:
 	var notes: Array[Rect2] = []
 	
 	var grid_positions: PackedVector2Array = PackedVector2Array()
-
-
-class DraggedPattern:
-	var pattern_index: int = -1
-
-
-class DraggedPatternPreview extends Control:
-	var cloned: bool = false
-	var reflect_transient_state: bool = false
-	
-	
-	func _input(event: InputEvent) -> void:
-		if not reflect_transient_state:
-			return
-		
-		if event is InputEventKey:
-			var ke := event as InputEventKey
-			if ke.keycode == KEY_ALT:
-				cloned = ke.pressed
-				queue_redraw()

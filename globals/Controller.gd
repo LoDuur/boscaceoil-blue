@@ -25,6 +25,18 @@ signal status_updated(level: StatusLevel, message: String)
 signal navigation_requested(target: int)
 signal navigation_succeeded(target: int)
 
+signal editor_focus_changed()
+## Emitted after an undo or a redo; editors clear their selection.
+signal history_navigated()
+## Emitted when pending placements (paste/duplicate ghosts, drags) must be dropped.
+signal ghost_cancel_requested()
+signal follow_playback_changed()
+## Emitted when a custom instrument's sound parameters change.
+signal custom_instrument_sound_changed(instrument_index: int)
+## Emitted after a whole-pattern transform; before and after are index-aligned,
+## so editors can carry their selection over.
+signal pattern_notes_transformed(pattern_index: int, before: Array[Vector3i], after: Array[Vector3i])
+
 const MAIN_WINDOW_SCRIPT := preload("res://gui/MainWindow.gd")
 const INFO_POPUP_SCENE := preload("res://gui/widgets/popups/InfoPopup.tscn")
 
@@ -35,19 +47,24 @@ enum StatusLevel {
 	ERROR,
 }
 
+## Grid editor that receives keyboard editing actions.
+enum EditorFocus {
+	NONE,
+	NOTES,
+	ARRANGEMENT,
+}
+
 enum DragSources {
 	PATTERN_DOCK,
 	INSTRUMENT_DOCK,
 }
 
-var debug_manager: DebugManager = null
 var settings_manager: SettingsManager = null
 var window_manager: WindowManager = null
 var state_manager: StateManager = null
 var voice_manager: VoiceManager = null
 var music_player: MusicPlayer = null
 var io_manager: IOManager = null
-var help_manager: HelpManager = null
 
 ## Current edited song.
 var current_song: Song = null
@@ -56,14 +73,24 @@ var current_pattern_index: int = -1
 ## Current edited instrument in the song, by index.
 var current_instrument_index: int = -1
 
+## Grid editor that receives keyboard editing actions, set on mouse press.
+var editor_focus: EditorFocus = EditorFocus.NONE
+## Whether the arrangement scrolls along with the playback.
+var follow_playback: bool = false
+## In-app clipboards; they survive pattern switches.
+var note_clipboard: GridClipboard = GridClipboard.new()
+var arrangement_clipboard: GridClipboard = GridClipboard.new()
+## Editors currently using the bare arrow keys (they have a selection or a ghost).
+var _arrow_capturing_editors: Dictionary = {}
+
 var instrument_themes: Dictionary = {
-	ColorPalette.PALETTE_BLUE:   preload("res://gui/theme/instruments/instrument_theme_blue.tres"),
-	ColorPalette.PALETTE_PURPLE: preload("res://gui/theme/instruments/instrument_theme_purple.tres"),
-	ColorPalette.PALETTE_RED:    preload("res://gui/theme/instruments/instrument_theme_red.tres"),
-	ColorPalette.PALETTE_ORANGE: preload("res://gui/theme/instruments/instrument_theme_orange.tres"),
-	ColorPalette.PALETTE_GREEN:  preload("res://gui/theme/instruments/instrument_theme_green.tres"),
-	ColorPalette.PALETTE_CYAN:   preload("res://gui/theme/instruments/instrument_theme_cyan.tres"),
-	ColorPalette.PALETTE_GRAY:   preload("res://gui/theme/instruments/instrument_theme_gray.tres"),
+	CustomColorPalette.PALETTE_BLUE:   preload("res://gui/theme/instruments/instrument_theme_blue.tres"),
+	CustomColorPalette.PALETTE_PURPLE: preload("res://gui/theme/instruments/instrument_theme_purple.tres"),
+	CustomColorPalette.PALETTE_RED:    preload("res://gui/theme/instruments/instrument_theme_red.tres"),
+	CustomColorPalette.PALETTE_ORANGE: preload("res://gui/theme/instruments/instrument_theme_orange.tres"),
+	CustomColorPalette.PALETTE_GREEN:  preload("res://gui/theme/instruments/instrument_theme_green.tres"),
+	CustomColorPalette.PALETTE_CYAN:   preload("res://gui/theme/instruments/instrument_theme_cyan.tres"),
+	CustomColorPalette.PALETTE_GRAY:   preload("res://gui/theme/instruments/instrument_theme_gray.tres"),
 }
 
 var _file_dialog: FileDialog = null
@@ -75,16 +102,22 @@ var _controls_blocker: PopupManager.PopupControl = null
 
 var _controls_locked: bool = false
 
+## Minimum time between custom instrument auditions, in milliseconds.
+const AUDITION_INTERVAL_MSEC := 150
+## Middle C.
+const AUDITION_NOTE := 60
+const AUDITION_LENGTH := 4
+var _last_audition_msec: int = -AUDITION_INTERVAL_MSEC
+var _audition_pending: bool = false
+
 
 func _init() -> void:
-	debug_manager = DebugManager.new()
 	settings_manager = SettingsManager.new()
 	window_manager = WindowManager.new()
 	state_manager = StateManager.new()
 	voice_manager = VoiceManager.new()
 	music_player = MusicPlayer.new()
 	io_manager = IOManager.new()
-	help_manager = HelpManager.new()
 	
 	settings_manager.buffer_size_changed.connect(music_player.update_driver_buffer)
 	settings_manager.load_settings()
@@ -121,16 +154,7 @@ func _shortcut_input(event: InputEvent) -> void:
 	if _controls_locked:
 		return
 	
-	if event.is_action_pressed("bosca_exit", false, true):
-		# Ignore this shortcut on web, as it doesn't make much sense
-		# when you can close the tab. Even in fullscreen this probably
-		# isn't an expected path — Esc is usually used to exit the
-		# fullscreen.
-		
-		if not OS.has_feature("web"):
-			io_manager.check_song_on_exit(true)
-	
-	elif event.is_action_pressed("bosca_toggle_fullscreen", false, true):
+	if event.is_action_pressed("bosca_toggle_fullscreen", false, true):
 		settings_manager.toggle_fullscreen()
 		
 		get_viewport().set_input_as_handled()
@@ -176,29 +200,32 @@ func _shortcut_input(event: InputEvent) -> void:
 		
 		get_viewport().set_input_as_handled()
 	
-	elif event.is_action_pressed("ui_undo", false, true):
-		if current_song:
-			state_manager.undo_state_change()
+	elif event.is_action_pressed("bosca_export", false, true):
+		io_manager.export_song()
 		
 		get_viewport().set_input_as_handled()
 	
-	elif event.is_action_pressed("ui_redo", false, true):
+	elif event.is_action_pressed("bosca_undo", false, true):
 		if current_song:
-			state_manager.do_state_change()
+			ghost_cancel_requested.emit()
+			state_manager.undo_state_change()
+			history_navigated.emit()
 		
 		get_viewport().set_input_as_handled()
-
-	else:
-		var debug_actions: Array[String] = [ "bosca_debug_1" ]
-		for i in debug_actions.size():
-			var action_name := debug_actions[i]
-			if event.is_action_pressed(action_name, false, true):
-				debug_manager.activate_debug(i)
+	
+	elif event.is_action_pressed("bosca_redo", false, true):
+		if current_song:
+			ghost_cancel_requested.emit()
+			state_manager.do_state_change()
+			history_navigated.emit()
+		
+		get_viewport().set_input_as_handled()
 
 
 # Navigation.
 
 func navigate_to(target: Menu.NavigationTarget) -> void:
+	ghost_cancel_requested.emit()
 	navigation_requested.emit(target)
 
 
@@ -285,22 +312,6 @@ func show_window_popup(popup: WindowPopup, popup_size: Vector2) -> void:
 	popup.popup_anchored(Vector2(0.5, 0.5), popup_size, PopupManager.Direction.OMNI, true)
 
 
-func show_welcome_message() -> void:
-	var welcome_message := get_info_popup()
-	if not welcome_message:
-		return # Popup is busy.
-	
-	welcome_message.title = "WELCOME to Bosca Ceoil"
-	welcome_message.content = "Looks like this is your [accent]FIRST TIME[/accent]!\nWould you like a quick introduction?\n\n(You can access this tour later by clicking [accent]HELP[/accent].)"
-	welcome_message.add_button("NO", welcome_message.close_popup)
-	welcome_message.add_button("YES", func() -> void:
-		welcome_message.close_popup()
-		help_manager.start_guide(HelpManager.GuideType.BASIC_GUIDE)
-	)
-	
-	show_window_popup(welcome_message, Vector2(600, 200))
-
-
 func show_blocker() -> void:
 	if not _controls_blocker:
 		_controls_blocker = PopupManager.PopupControl.new()
@@ -330,10 +341,33 @@ func update_status_notes_dropped(dropped_amount: int) -> void:
 		update_status("%d NOTES WERE REMOVED (CTRL + Z TO UNDO)" % [ dropped_amount ], Controller.StatusLevel.WARNING)
 
 
+# Grid editor focus.
+
+func set_editor_focus(focus: EditorFocus) -> void:
+	if editor_focus == focus:
+		return
+	
+	editor_focus = focus
+	editor_focus_changed.emit()
+
+
+func set_editor_arrow_capture(editor: EditorFocus, captured: bool) -> void:
+	_arrow_capturing_editors[editor] = captured
+
+
+## Whether the focused editor uses the bare arrow keys, in which case arrow
+## scrolling elsewhere is suspended.
+func are_arrows_captured() -> bool:
+	return _arrow_capturing_editors.get(editor_focus, false)
+
+
 # Song editing.
 
 func set_current_song(song: Song) -> void:
 	state_manager.clear_state_memory()
+	
+	ghost_cancel_requested.emit()
+	set_editor_focus(EditorFocus.NONE)
 	
 	current_song = song
 	_change_current_pattern(0, false, true)
@@ -351,6 +385,7 @@ func mark_song_saved() -> void:
 
 
 func lock_song_editing(message: String) -> void:
+	ghost_cancel_requested.emit()
 	_controls_locked = true
 	show_blocker()
 	controls_locked.emit(message)
@@ -550,6 +585,110 @@ func delete_pattern(pattern_index: int) -> void:
 	state_manager.commit_state_change(song_state)
 
 
+func set_follow_playback(enabled: bool) -> void:
+	if follow_playback == enabled:
+		return
+	
+	follow_playback = enabled
+	follow_playback_changed.emit()
+
+
+## Indices of patterns that aren't placed anywhere in the arrangement. At
+## least one pattern always remains.
+func get_unused_pattern_indices() -> Array[int]:
+	var used := {}
+	var arrangement := current_song.arrangement
+	for bar_index in arrangement.timeline_length:
+		for channel in Arrangement.CHANNEL_NUMBER:
+			used[arrangement.timeline_bars[bar_index][channel]] = true
+	
+	var unused: Array[int] = []
+	for i in current_song.patterns.size():
+		if not used.has(i):
+			unused.push_back(i)
+	if unused.size() == current_song.patterns.size():
+		unused.remove_at(0)
+	return unused
+
+
+func remove_unused_patterns_safe() -> void:
+	if not current_song:
+		return
+	
+	var unused := get_unused_pattern_indices()
+	if unused.is_empty():
+		update_status("NO UNUSED PATTERNS", StatusLevel.INFO)
+		return
+	
+	var confirmation := get_info_popup()
+	if not confirmation:
+		return # Popup is busy.
+	
+	confirmation.title = "Remove unused patterns"
+	confirmation.content = "[accent]%d %s[/accent] %s not placed in the arrangement.\n\nRemove %s? (CTRL + Z to undo)" % [ unused.size(), "PATTERN" if unused.size() == 1 else "PATTERNS", "is" if unused.size() == 1 else "are", "it" if unused.size() == 1 else "them" ]
+	confirmation.add_button("Cancel", confirmation.close_popup)
+	confirmation.add_button("Remove", func() -> void:
+		confirmation.close_popup()
+		remove_unused_patterns()
+	)
+	show_window_popup(confirmation, Vector2(560, 190))
+
+
+## Deletes every unused pattern as one undoable change, renumbering the
+## arrangement's references to the remaining ones.
+func remove_unused_patterns() -> void:
+	if not current_song:
+		return
+	
+	var unused := get_unused_pattern_indices()
+	if unused.is_empty():
+		return
+	
+	# Map old indices of the remaining patterns to their new ones.
+	var index_map := {}
+	var next_index := 0
+	for i in current_song.patterns.size():
+		if not unused.has(i):
+			index_map[i] = next_index
+			next_index += 1
+	
+	var forward_changes := {}
+	var backward_changes := {}
+	var arrangement := current_song.arrangement
+	for bar_index in arrangement.timeline_length:
+		for channel in Arrangement.CHANNEL_NUMBER:
+			var pattern_index: int = arrangement.timeline_bars[bar_index][channel]
+			if pattern_index >= 0 && index_map[pattern_index] != pattern_index:
+				forward_changes[Vector2i(bar_index, channel)] = index_map[pattern_index]
+				backward_changes[Vector2i(bar_index, channel)] = pattern_index
+	
+	var removed_patterns: Array[Pattern] = []
+	for i in unused:
+		removed_patterns.push_back(current_song.patterns[i])
+	var previous_pattern_index := current_pattern_index
+	var next_pattern_index: int = index_map.get(current_pattern_index, 0)
+	
+	var song_state := state_manager.create_state_change(StateManager.StateChangeType.SONG)
+	# The arrangement must never reference a missing pattern, even between
+	# steps: renumber before removing, and restore patterns before renumbering back.
+	song_state.add_do_action(func() -> void:
+		current_song.arrangement.apply_cell_changes(forward_changes)
+		for j in range(unused.size() - 1, -1, -1):
+			_untrack_pattern_changes(unused[j])
+			current_song.remove_pattern(unused[j])
+		_change_current_pattern(next_pattern_index, true, true)
+	)
+	song_state.add_undo_action(func() -> void:
+		for j in unused.size():
+			current_song.add_pattern(removed_patterns[j], unused[j])
+		current_song.arrangement.apply_cell_changes(backward_changes)
+		_change_current_pattern(previous_pattern_index, true, true)
+	)
+	
+	state_manager.commit_state_change(song_state)
+	update_status("%d UNUSED %s REMOVED" % [ unused.size(), "PATTERN" if unused.size() == 1 else "PATTERNS" ], StatusLevel.SUCCESS)
+
+
 func delete_pattern_nocheck(pattern_index: int) -> void:
 	_untrack_pattern_changes(pattern_index)
 	current_song.remove_pattern(pattern_index)
@@ -583,6 +722,76 @@ func preview_pattern_note(value: int, length: int) -> void:
 	var current_pattern := get_current_pattern()
 	if current_pattern:
 		music_player.play_note(current_pattern, note_data)
+
+
+## Replaces the notes of a pattern as one undoable change. With an accumulation
+## id, repeated calls within a short window merge into a single undo step.
+func commit_pattern_notes(pattern_index: int, next_notes: Array[Vector3i], accum_id: String = "") -> void:
+	if not current_song || pattern_index < 0 || pattern_index >= current_song.patterns.size():
+		return
+	
+	var previous_notes := current_song.patterns[pattern_index].get_notes_snapshot()
+	
+	var pattern_state := state_manager.create_state_change(StateManager.StateChangeType.PATTERN, pattern_index, accum_id)
+	var state_context := pattern_state.get_context()
+	# When accumulating, the original "before" is kept and only "after" moves on.
+	if not state_context.has("before"):
+		state_context["before"] = previous_notes
+	state_context["after"] = next_notes
+	
+	pattern_state.add_do_action(func() -> void:
+		var reference_pattern := current_song.patterns[pattern_state.reference_id]
+		reference_pattern.set_notes_snapshot(state_context.after)
+	)
+	pattern_state.add_undo_action(func() -> void:
+		var reference_pattern := current_song.patterns[pattern_state.reference_id]
+		reference_pattern.set_notes_snapshot(state_context.before)
+	)
+	
+	state_manager.commit_state_change(pattern_state)
+
+
+## Moves every note of the current pattern by rows (scale degrees or drum rows).
+func shift_current_pattern_notes(row_offset: int) -> void:
+	var pattern := get_current_pattern()
+	if not pattern || pattern.note_amount == 0 || row_offset == 0:
+		return
+	
+	var instrument := current_song.instruments[pattern.instrument_idx]
+	var before := pattern.get_notes_snapshot()
+	var after := pattern.get_shifted_notes(row_offset, instrument)
+	if after.is_empty():
+		update_status("CAN'T SHIFT — NOTES AT THE EDGE", StatusLevel.WARNING)
+		return
+	
+	commit_pattern_notes(current_pattern_index, after, "notes_shift_all_%d" % [ current_pattern_index ])
+	pattern_notes_transformed.emit(current_pattern_index, before, after)
+
+
+## Moves every note of the current pattern by ticks, wrapping within the pattern.
+func rotate_current_pattern_notes(tick_offset: int) -> void:
+	var pattern := get_current_pattern()
+	if not pattern || pattern.note_amount == 0 || tick_offset == 0:
+		return
+	
+	var before := pattern.get_notes_snapshot()
+	var after := pattern.get_rotated_notes(tick_offset, current_song.pattern_size)
+	
+	commit_pattern_notes(current_pattern_index, after, "notes_shift_all_%d" % [ current_pattern_index ])
+	pattern_notes_transformed.emit(current_pattern_index, before, after)
+
+
+## Plays several notes of the current pattern at once, e.g. after moving them.
+func preview_pattern_notes(note_values: Array[int], length: int) -> void:
+	var current_pattern := get_current_pattern()
+	if not current_pattern || note_values.is_empty():
+		return
+	
+	var position := maxi(0, music_player.get_pattern_time())
+	var notes: Array[Vector3i] = []
+	for value in note_values:
+		notes.push_back(Vector3i(value, position, length))
+	music_player.play_notes(current_pattern, notes)
 
 
 func _handle_pattern_note_added(note_data: Vector3i) -> void:
@@ -677,7 +886,14 @@ func randomize_instrument(instrument_index: int) -> void:
 	if instrument_index != instrument_index_:
 		return
 
-	var voice_data := voice_manager.get_random_voice_data()
+	var instrument := current_song.instruments[instrument_index]
+	if instrument is CustomInstrument:
+		# A custom instrument stays custom; only its sound is rolled.
+		_randomize_custom_instrument(instrument_index)
+		return
+	
+	var current_voice := voice_manager.get_voice_data_at(instrument.voice_index)
+	var voice_data := voice_manager.get_random_voice_data(current_voice)
 	_set_current_instrument_by_voice(voice_data)
 
 
@@ -824,6 +1040,12 @@ func _set_current_instrument_by_voice(voice_data: VoiceManager.VoiceData) -> voi
 	if not voice_data:
 		return
 	
+	_replace_current_instrument(instance_instrument_by_voice.bind(voice_data))
+
+
+## Replaces the current instrument with one made by the factory, updating the
+## patterns that use it, as one undoable change.
+func _replace_current_instrument(make_instrument: Callable) -> void:
 	var instrument_idx := current_instrument_index
 	var old_instrument := current_song.instruments[instrument_idx]
 	
@@ -834,7 +1056,7 @@ func _set_current_instrument_by_voice(voice_data: VoiceManager.VoiceData) -> voi
 	state_context["reset_patterns_affected"] = []
 
 	song_state.add_do_action(func() -> void:
-		var instrument := instance_instrument_by_voice(voice_data)
+		var instrument: Instrument = make_instrument.call()
 		current_song.instruments[instrument_idx] = instrument
 		
 		state_context.reset_patterns.clear()
@@ -879,6 +1101,143 @@ func _set_current_instrument_by_voice(voice_data: VoiceManager.VoiceData) -> voi
 	state_manager.commit_state_change(song_state)
 
 
+# Custom instruments.
+
+## Turns the current instrument into a custom one, copying the source
+## definition, or using defaults when there is none.
+func set_current_instrument_custom(source: CustomInstrument = null) -> void:
+	if not get_current_instrument():
+		return
+	
+	var definition := source.duplicate_instrument() if source else CustomInstrument.new()
+	_replace_current_instrument(func() -> Instrument: return definition.duplicate_instrument())
+
+
+func _get_custom_instrument(instrument_index: int) -> CustomInstrument:
+	if not current_song || instrument_index < 0 || instrument_index >= current_song.instruments.size():
+		return null
+	return current_song.instruments[instrument_index] as CustomInstrument
+
+
+## Changes one sound parameter. Rapid edits of the same field merge into one
+## undo step.
+func set_custom_instrument_field(instrument_index: int, field: String, value: int) -> void:
+	_commit_custom_instrument_change(instrument_index, "custom_instrument_%d_%s" % [ instrument_index, field ], { field: value })
+
+
+func set_custom_instrument_fields(instrument_index: int, values: Dictionary) -> void:
+	_commit_custom_instrument_change(instrument_index, "", values)
+
+
+func _commit_custom_instrument_change(instrument_index: int, accum_id: String, values: Dictionary) -> void:
+	var instrument := _get_custom_instrument(instrument_index)
+	if not instrument:
+		return
+	
+	var next_values := {}
+	for field: String in values:
+		next_values[field] = CustomInstrument.clamp_field(field, values[field])
+	
+	var instrument_state := state_manager.create_state_change(StateManager.StateChangeType.INSTRUMENT, instrument_index, accum_id)
+	var state_context := instrument_state.get_context()
+	if not state_context.has("before"):
+		var previous_values := {}
+		for field: String in next_values:
+			previous_values[field] = instrument.get_field(field)
+		state_context["before"] = previous_values
+	state_context["after"] = next_values
+	
+	instrument_state.add_do_action(func() -> void:
+		_apply_custom_instrument_values(instrument_state.reference_id, state_context.after)
+	)
+	instrument_state.add_undo_action(func() -> void:
+		_apply_custom_instrument_values(instrument_state.reference_id, state_context.before)
+	)
+	
+	state_manager.commit_state_change(instrument_state)
+	audition_instrument(instrument_index)
+
+
+func _apply_custom_instrument_values(instrument_index: int, values: Dictionary) -> void:
+	var instrument := _get_custom_instrument(instrument_index)
+	if not instrument:
+		return
+	
+	for field: String in values:
+		instrument.set_field(field, values[field])
+	custom_instrument_sound_changed.emit(instrument_index)
+
+
+func set_custom_instrument_name(instrument_index: int, value: String) -> void:
+	_commit_custom_instrument_identity(instrument_index, "display_name", CustomInstrument.sanitize_name(value))
+
+
+func set_custom_instrument_palette(instrument_index: int, value: int) -> void:
+	_commit_custom_instrument_identity(instrument_index, "palette", CustomColorPalette.validate(value))
+
+
+func _commit_custom_instrument_identity(instrument_index: int, property: String, value: Variant) -> void:
+	var instrument := _get_custom_instrument(instrument_index)
+	if not instrument || instrument.get(property) == value:
+		return
+	
+	var instrument_state := state_manager.create_state_change(StateManager.StateChangeType.INSTRUMENT, instrument_index)
+	var previous_value: Variant = instrument.get(property)
+	instrument_state.add_do_action(func() -> void:
+		current_song.instruments[instrument_state.reference_id].set(property, value)
+		song_instrument_changed.emit()
+	)
+	instrument_state.add_undo_action(func() -> void:
+		current_song.instruments[instrument_state.reference_id].set(property, previous_value)
+		song_instrument_changed.emit()
+	)
+	
+	state_manager.commit_state_change(instrument_state)
+
+
+## Rolls new sound parameters within musically safe ranges, so the result is
+## always audible and not too harsh.
+func _randomize_custom_instrument(instrument_index: int) -> void:
+	var values := {}
+	values["osc_mode"] = randi_range(CustomInstrument.OscillatorMode.SINGLE, CustomInstrument.OscillatorMode.DUAL)
+	values["wave1"] = CustomInstrument.WAVEFORMS.pick_random()[1]
+	values["wave2"] = CustomInstrument.WAVEFORMS.pick_random()[1]
+	values["dual_connection"] = randi_range(0, CustomInstrument.CONNECTION_MAX)
+	values["dual_balance"] = randi_range(-32, 32)
+	values["dual_detune"] = randi_range(-16, 16)
+	values["attack_rate"] = randi_range(40, CustomInstrument.RATE_MAX)
+	values["decay_rate"] = randi_range(0, 40)
+	values["sustain_rate"] = randi_range(0, 20)
+	values["release_rate"] = randi_range(16, 48)
+	values["sustain_level"] = randi_range(0, 10)
+	values["total_level"] = randi_range(0, 24)
+	values["vibrato_depth"] = [ 0, 0, 0, randi_range(4, 24) ].pick_random()
+	set_custom_instrument_fields(instrument_index, values)
+
+
+## Plays a short note on the instrument while playback is stopped, at most
+## once per AUDITION_INTERVAL_MSEC; the last change inside the window plays
+## when it ends.
+func audition_instrument(instrument_index: int) -> void:
+	if music_player.is_playing() || _audition_pending:
+		return
+	
+	var wait_msec := _last_audition_msec + AUDITION_INTERVAL_MSEC - Time.get_ticks_msec()
+	if wait_msec > 0:
+		_audition_pending = true
+		get_tree().create_timer(wait_msec / 1000.0).timeout.connect(func() -> void:
+			_audition_pending = false
+			audition_instrument(instrument_index)
+		)
+		return
+	
+	if not current_song || instrument_index < 0 || instrument_index >= current_song.instruments.size():
+		return
+	
+	_last_audition_msec = Time.get_ticks_msec()
+	music_player.play_instrument_note(current_song.instruments[instrument_index], AUDITION_NOTE, AUDITION_LENGTH)
+
+
 func set_current_instrument(category: String, instrument_name: String) -> void:
 	if not current_song:
 		return
@@ -902,14 +1261,14 @@ func set_current_instrument_by_category(category: String) -> void:
 func get_current_instrument_theme() -> Theme:
 	var current_instrument := get_current_instrument()
 	if not current_instrument || not instrument_themes.has(current_instrument.color_palette):
-		return instrument_themes[ColorPalette.PALETTE_GRAY]
+		return instrument_themes[CustomColorPalette.PALETTE_GRAY]
 	
 	return instrument_themes[current_instrument.color_palette]
 
 
 func get_instrument_theme(instrument: Instrument) -> Theme:
 	if not instrument || not instrument_themes.has(instrument.color_palette):
-		return instrument_themes[ColorPalette.PALETTE_GRAY]
+		return instrument_themes[CustomColorPalette.PALETTE_GRAY]
 	
 	return instrument_themes[instrument.color_palette]
 

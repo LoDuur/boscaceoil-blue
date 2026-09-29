@@ -49,9 +49,6 @@ const NOTE_FORMAT_NAME := {
 	NoteFormat.FORMAT_DOREMI: "DoReMi",
 }
 
-# Indicates whether this is the first launch of the app.
-var _first_time: bool = true
-
 # Stored properties.
 
 var _stored_file: ConfigFile = null
@@ -106,7 +103,6 @@ func load_settings() -> void:
 	
 	_last_opened_folder =    _stored_file.get_value("files", "last_folder", _last_opened_folder)
 	
-	_first_time = false
 	settings_loaded.emit()
 
 
@@ -149,10 +145,6 @@ func _save_settings_debounced() -> void:
 		return
 	
 	print("Successfully saved settings to %s." % [ CONFIG_PATH ] )
-
-
-func is_first_time() -> bool:
-	return _first_time
 
 
 # Settings management.

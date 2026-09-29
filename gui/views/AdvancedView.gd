@@ -8,7 +8,7 @@ extends MarginContainer
 
 @onready var _effect_picker: OptionPicker = %EffectPicker
 @onready var _effect_value_slider: PadSlider = %EffectValueSlider
-@onready var _swing_stepper: Stepper = %SwingStepper
+@onready var _swing_slider: ValueSlider = %SwingSlider
 
 @onready var _buffer_size_picker: OptionPicker = %BufferPicker
 @onready var _gui_scale_picker: OptionPicker = %GUIScalePicker
@@ -23,7 +23,7 @@ func _ready() -> void:
 	
 	_effect_picker.selected.connect(_change_effect)
 	_effect_value_slider.changed.connect(_change_effect)
-	_swing_stepper.value_changed.connect(_change_swing)
+	_swing_slider.value_changed.connect(_change_swing)
 	
 	_buffer_size_picker.selected.connect(_change_buffer_size)
 	_gui_scale_picker.selected.connect(_change_gui_scale)
@@ -62,12 +62,12 @@ func _update_song_widgets() -> void:
 	if not Controller.current_song:
 		_effect_picker.set_selected(_effect_picker.options[0])
 		_effect_value_slider.set_current_value(Vector2i(0, 0))
-		_swing_stepper.value = 0
+		_swing_slider.value = 0
 		return
 	
 	_effect_picker.set_selected(_effect_picker.options[Controller.current_song.global_effect])
 	_effect_value_slider.set_current_value(Vector2i(Controller.current_song.global_effect_power, 0))
-	_swing_stepper.value = Controller.current_song.swing
+	_swing_slider.value = Controller.current_song.swing
 
 
 func _change_effect() -> void:
@@ -75,7 +75,7 @@ func _change_effect() -> void:
 
 
 func _change_swing() -> void:
-	Controller.set_song_swing(_swing_stepper.value)
+	Controller.set_song_swing(_swing_slider.value)
 
 
 # App settings.

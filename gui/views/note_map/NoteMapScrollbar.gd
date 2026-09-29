@@ -38,7 +38,9 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _shortcut_input(event: InputEvent) -> void:
-	_button_holder.input(event)
+	# Arrow scrolling yields to a grid editor that moves its selection with arrows.
+	var arrows_captured := not Engine.is_editor_hint() && Controller.are_arrows_captured()
+	_button_holder.input(event, arrows_captured)
 
 
 func _draw() -> void:

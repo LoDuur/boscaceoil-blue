@@ -25,12 +25,11 @@ var _subtitle_easter_egg: bool = false
 @onready var _create_song_button: SquishyButton = %CreateSong
 @onready var _load_song_button: SquishyButton = %LoadSong
 @onready var _save_song_button: SquishyButton = %SaveSong
-@onready var _import_song_button: SquishyButton = %ImportSong
 @onready var _export_song_button: SquishyButton = %ExportSong
 
-@onready var _pattern_size_stepper: Stepper = %PatternStepper
-@onready var _bar_size_stepper: Stepper = %BarStepper
-@onready var _bpm_stepper: Stepper = %BPMStepper
+@onready var _pattern_size_slider: ValueSlider = %PatternSlider
+@onready var _bar_size_slider: ValueSlider = %BarSlider
+@onready var _bpm_slider: ValueSlider = %BPMSlider
 
 
 func _init() -> void:
@@ -54,17 +53,16 @@ func _ready() -> void:
 	_create_song_button.pressed.connect(Controller.io_manager.create_new_song_safe)
 	_load_song_button.pressed.connect(Controller.io_manager.load_ceol_song_safe)
 	_save_song_button.pressed.connect(Controller.io_manager.save_ceol_song)
-	_import_song_button.pressed.connect(Controller.io_manager.import_song_safe)
 	_export_song_button.pressed.connect(Controller.io_manager.export_song)
 	
-	_pattern_size_stepper.value_changed.connect(_change_pattern_size)
-	_bar_size_stepper.value_changed.connect(_change_bar_size)
-	_bpm_stepper.value_changed.connect(_change_bpm)
+	_pattern_size_slider.value_changed.connect(_change_pattern_size)
+	_bar_size_slider.value_changed.connect(_change_bar_size)
+	_bpm_slider.value_changed.connect(_change_bpm)
 	
 	if not Engine.is_editor_hint():
-		Controller.song_loaded.connect(_update_song_steppers)
-		Controller.song_sizes_changed.connect(_update_song_steppers)
-		Controller.song_bpm_changed.connect(_update_song_steppers)
+		Controller.song_loaded.connect(_update_song_sliders)
+		Controller.song_sizes_changed.connect(_update_song_sliders)
+		Controller.song_bpm_changed.connect(_update_song_sliders)
 
 
 func _notification(what: int) -> void:
@@ -114,27 +112,27 @@ func _update_version_subtitle() -> void:
 
 
 func _change_pattern_size() -> void:
-	Controller.set_song_pattern_size(_pattern_size_stepper.value)
+	Controller.set_song_pattern_size(_pattern_size_slider.value)
 
 
 func _change_bar_size() -> void:
-	Controller.set_song_bar_size(_bar_size_stepper.value)
+	Controller.set_song_bar_size(_bar_size_slider.value)
 
 
 func _change_bpm() -> void:
-	Controller.set_song_bpm(_bpm_stepper.value)
+	Controller.set_song_bpm(_bpm_slider.value)
 
 
-func _update_song_steppers() -> void:
+func _update_song_sliders() -> void:
 	if not Controller.current_song:
-		_pattern_size_stepper.value = Song.DEFAULT_PATTERN_SIZE
-		_bar_size_stepper.value = Song.DEFAULT_BAR_SIZE
-		_bpm_stepper.value = Song.DEFAULT_BPM
+		_pattern_size_slider.value = Song.DEFAULT_PATTERN_SIZE
+		_bar_size_slider.value = Song.DEFAULT_BAR_SIZE
+		_bpm_slider.value = Song.DEFAULT_BPM
 		return
 	
-	_pattern_size_stepper.value = Controller.current_song.pattern_size
-	_bar_size_stepper.value = Controller.current_song.bar_size
-	_bpm_stepper.value = Controller.current_song.bpm
+	_pattern_size_slider.value = Controller.current_song.pattern_size
+	_bar_size_slider.value = Controller.current_song.bar_size
+	_bpm_slider.value = Controller.current_song.bpm
 
 
 func _show_credits() -> void:

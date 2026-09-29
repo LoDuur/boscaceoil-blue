@@ -63,7 +63,7 @@ func _draw() -> void:
 		_draw_selected_outline(self, item_rect)
 
 
-func draw_item(on_control: Control, pattern: PatternMap.ActivePattern, item_origin: Vector2, draw_selected: bool = false) -> void:
+func draw_item(on_control: Control, pattern: PatternMap.ActivePattern, item_origin: Vector2) -> void:
 	var item_position := item_origin + pattern.item_position
 	var notes_area_position := item_origin + pattern.notes_area.position
 	var label_underline_position := item_origin + pattern.label_underline_area.position
@@ -78,11 +78,6 @@ func draw_item(on_control: Control, pattern: PatternMap.ActivePattern, item_orig
 	var shadow_position := string_position + _shadow_size
 	var gutter_string := "%d" % [ pattern.pattern_index + 1 ]
 	
-	# A bit of a hack, but it lets us use any Control-derivative for drawing. If it has
-	# this property, we use it. If not, then not.
-	if on_control.get("cloned"):
-		gutter_string += "*"
-	
 	on_control.draw_string(_font, shadow_position, gutter_string, HORIZONTAL_ALIGNMENT_LEFT, -1, _font_size, _shadow_color)
 	on_control.draw_string(_font, string_position, gutter_string, HORIZONTAL_ALIGNMENT_LEFT, -1, _font_size, _font_color)
 	
@@ -91,9 +86,6 @@ func draw_item(on_control: Control, pattern: PatternMap.ActivePattern, item_orig
 	for note_rect in pattern.notes:
 		var note_rect_position := item_origin + note_rect.position
 		on_control.draw_rect(Rect2(note_rect_position, note_rect.size), _note_color)
-	
-	if draw_selected:
-		_draw_selected_outline(on_control, Rect2(item_position, pattern.item_size))
 
 
 func _draw_selected_outline(on_control: Control, item_rect: Rect2) -> void:

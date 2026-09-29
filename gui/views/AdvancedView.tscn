@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://ggnvgntxytdg"]
 
 [ext_resource type="Script" path="res://gui/views/AdvancedView.gd" id="1_lhikh"]
-[ext_resource type="PackedScene" uid="uid://d2peohvka6nmb" path="res://gui/widgets/Stepper.tscn" id="1_uibd1"]
+[ext_resource type="PackedScene" path="res://gui/widgets/ValueSlider.tscn" id="1_uibd1"]
 [ext_resource type="PackedScene" uid="uid://dpno0cpboqdm0" path="res://gui/widgets/OptionPicker.tscn" id="3_ttw6g"]
 [ext_resource type="PackedScene" uid="uid://dtvff0pavdph7" path="res://gui/widgets/PadSlider.tscn" id="3_xr70i"]
 
@@ -94,7 +94,7 @@ size_flags_horizontal = 3
 text = "SWING"
 uppercase = true
 
-[node name="SwingStepper" parent="Layout/Tuning/Contents/SwingSettings/Layout" instance=ExtResource("1_uibd1")]
+[node name="SwingSlider" parent="Layout/Tuning/Contents/SwingSettings/Layout" instance=ExtResource("1_uibd1")]
 unique_name_in_owner = true
 auto_translate_mode = 1
 layout_mode = 2

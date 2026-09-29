@@ -18,7 +18,7 @@ signal bars_pasted(at_index: int)
 signal shifted_right()
 signal shifted_left()
 
-## Stepper is accelerated to make it easier to scroll through the range of values.
+## Holding a button is accelerated to make it easier to scroll through a range of values.
 ## These are arbitrary fine-tuned values, and can differ from ButtonHolder.
 const SCROLL_THRESHOLDS := [ 0.3, 0.2, 0.088 ]
 ## Time between sequential clicks when they are considered a double click.
@@ -113,10 +113,10 @@ func _shortcut_input(event: InputEvent) -> void:
 	if not _hovering || Controller.is_song_editing_locked():
 		return
 	
-	if event.is_action_pressed("ui_copy", false, true):
+	if event.is_action_pressed("bosca_copy", false, true):
 		_copy_bars_in_loop()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_paste", false, true):
+	elif event.is_action_pressed("bosca_paste", false, true):
 		_paste_bars_at_cursor()
 		get_viewport().set_input_as_handled()
 
