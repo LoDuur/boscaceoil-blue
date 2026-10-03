@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=6 format=3 uid="uid://djtns5uw7yxwh"]
+[gd_resource type="Theme" format=3 uid="uid://djtns5uw7yxwh"]
 
 [ext_resource type="Texture2D" uid="uid://di3xykrb8awus" path="res://gui/theme/pad_slider_pattern.tres" id="1_16fbj"]
 

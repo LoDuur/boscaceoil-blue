@@ -372,6 +372,7 @@ layout_mode = 2
 value = 120
 min_value = 10
 max_value = 450
+step = 5
 
 [node name="FillerEnd" type="Control" parent="Layout" unique_id=205106600]
 auto_translate_mode = 1
